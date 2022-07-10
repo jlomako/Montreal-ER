@@ -5,3 +5,6 @@ visit app here:
 
 <a href = "https://jlomako.shinyapps.io/occupancy_app/">https://jlomako.shinyapps.io/occupancy_app/</a>
 
+to do:
+<br>
+remove extra days in plot
