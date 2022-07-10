@@ -1,72 +1,63 @@
-####################################################
-# ER OCCUPATION
-####################################################
+######################################################################
+#
+# Occupancy rates in Montreal emergency rooms
+#
+######################################################################
+
+# install.packages("vroom")
+# install.packages("tidyverse")
+# install.packages("shiny")
 
 library(shiny)
 library(vroom)
 library(tidyverse)
 
-# download file
-# download.file("https://github.com/jlomako/pdfscraper/raw/main/data/daily_data.csv", "daily_data.csv", quiet = TRUE)
-# data <- vroom::vroom("daily_data.csv")
-
+# use data from my pdfscraper
 data <- vroom::vroom("https://github.com/jlomako/pdfscraper/raw/main/data/daily_data.csv")
 
 # get hospital names
 hospitals <- names(data[2:22])
 
-# front end interface
-ui <- fluidPage(
+# start shiny app:
+ui <- bootstrapPage(
   
-      # use bootstrap
-      theme = bslib::bs_theme(bootswatch = "flatly"),
-      
-      # insert some HTML code
-      HTML(r"(<br><br>)"),
-  
-      # show hospital selector
-      fluidRow(column(12, selectInput(inputId = "hospital", 
-                                                label = "Select a hospital", 
-                                                choices = hospitals, 
-                                                width = "100%"))),
-      # show plot
-      fluidRow(column(12, plotOutput("plot"))),
-  
-      # insert some HTML code
-      HTML(r"(<br><br>)"),
-                
-      # show table
-      fluidRow(column(12, tableOutput("table")))
+  # uses bootstrap 5
+  theme = bslib::bs_theme(version = 5),
+  tags$head(tags$link(rel = "stylesheet", type = "text/css", href = "https://bootswatch.com/5/spacelab/bootstrap.min.css")),
+  div(class="container-fluid shadow-none p-4 mb-5 bg-light",
+      div(class="row pt-3",
+          div(class="col-12", 
+              HTML(r"(<h2>Occupancy rates in Montreal emergency rooms</h2><br><br>)"),
+              selectInput(inputId = "hospital", 
+                          label = "Select a hospital", 
+                          choices = hospitals,
+                          width = "100%")
+          )
+      ),
+      div(class="row",
+          div(class="col-12", plotOutput("plot"))
+      )
+  )
 )
 
 # back end
 server <- function(input, output, session) {
-  # OBS! input objects are read-only
   selected <- reactive(data %>% select(Date, occupancy = input$hospital))
-  
-  # OBS! always use output object with render function
   # plot output
   output$plot <- renderPlot({
     selected() %>%
       ggplot(aes(Date, occupancy, fill = occupancy)) +
-      geom_col(position = "identity", size = 0.5, show.legend = F)  +
-      scale_x_date(date_labels = "%Y-%m-%d", date_breaks = "1 day") + # minor_breaks = "1 day"
-      # geom_text(aes(label = paste0(occupancy,"%")), vjust = 1.5, colour = "white", size = 3.5) +
+      geom_col(position = "identity", size = 0.5, show.legend = F, na.rm = T)  +
+      scale_x_date(date_labels = "%Y-%m-%d", date_breaks = "1 day") +
       theme_minimal() +
-      labs(y = NULL, x = NULL) + # title = input$hospital)
+      labs(y = NULL, x = NULL) +
       ylim(0,200) +
-      theme(axis.text.x = element_text(angle = 90)) +
+      theme(axis.text.x = element_text(angle = 90), 
+            panel.grid.major.x = element_blank(), # remove vertical grid lines
+            panel.grid.major.y = element_line()) + # horizontal lines only
       scale_fill_gradient2(low = "light green", high = "red", mid = "yellow", midpoint = 80)
   }, res = 96)
-  
-  # table output
-  output$table <- renderTable(
-    # change weird number to actual date
-    selected() %>% mutate(Date = as.character(Date))
-  )
-
 }
 
 shinyApp(ui, server)
-
 
