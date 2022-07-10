@@ -1,1 +1,7 @@
-shiny app dashboard
+<h1>Occupancy app</h1>
+shiny app that displays daily updated data from my "pdfscraper" repository
+
+visit app here:
+
+<a href = "https://jlomako.shinyapps.io/occupancy_app/">https://jlomako.shinyapps.io/occupancy_app/</a>
+
