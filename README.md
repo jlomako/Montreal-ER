@@ -1,7 +1,5 @@
 <h1>Occupancy app</h1>
-Interactive Shiny app to explore occupancy rates in Montreal emergency rooms.
-<br>
-Based on data from my "pdfscraper" repository.
+Interactive app (Shiny) to explore occupancy rates in Montreal emergency rooms.
 <br><br>
 Link to app:
 
