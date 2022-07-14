@@ -67,7 +67,6 @@ server <- function(input, output, session) {
       ggplot(aes(x = reorder(name, value), y = value, fill = value)) +
       geom_col(position = "identity", size = 0.5, show.legend = F) +
       geom_text(aes(label = paste0(value,"%")), hjust = 1, colour = "white", size = 3) +
-      # scale_y_continuous(limits = c(0,max_value), labels = scales::percent_format(scale = 1)) +
       coord_flip() +
       scale_fill_gradient2(low = "light green", high = "red", mid = "yellow", midpoint = 80) + 
       theme_minimal() +
@@ -81,17 +80,16 @@ server <- function(input, output, session) {
   output$plot <- renderPlot({
     selected() %>%
       ggplot(aes(Date, occupancy, fill = occupancy)) +
-      geom_col(position = "identity", size = 0.5, show.legend = F, na.rm = T)  +
+      geom_line(size = 0.5, show.legend = F, na.rm = T) +
+      # geom_col(position = "identity", size = 0.5, show.legend = F, na.rm = T)  +
       scale_x_date(date_labels = "%b %d", date_breaks = "1 week", minor_breaks = "1 day") +
       scale_y_continuous(limits = c(0,max_value), labels = scales::percent_format(scale = 1)) +
       theme_minimal() +
-      labs(y = "Occupancy rate\n", x = NULL, caption = "*occupancy rate at 1 p.m.") +
-      theme(panel.grid.major.y = element_line()) + # horizontal lines only
-      scale_fill_gradient2(low = "light green", high = "red", mid = "yellow", midpoint = 80) +
+      labs(y = "Occupancy rate\n", x = NULL, caption = "*occupancy rates are saved at 1 p.m. every day") +
+      # theme(panel.grid.major = element_line()) + # horizontal lines only
+      # scale_fill_gradient2(low = "light green", high = "red", mid = "yellow", midpoint = 80) +
       geom_hline(yintercept = 100, col = "red")
   }, res = 96)
-  
-  # to do: output table 
 
 }
 
