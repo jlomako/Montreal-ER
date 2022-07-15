@@ -14,4 +14,4 @@ screenshot (mobile app)
 </a>
 
 ### to do:
-* remove extra days in plot
+* change source for daily plot
