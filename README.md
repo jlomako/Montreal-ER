@@ -10,7 +10,7 @@ screenshot (mobile app)
 
 <br>
 <a href = "https://jlomako.shinyapps.io/occupancy_app/">
-   <img src="Screenshot_20220714-153456.png" alt="screenshot" width=15%>
+   <img src="img/Screenshot_20220715-181344.png" alt="screenshot" width=15%>
 </a>
 
 ### to do:
