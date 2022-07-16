@@ -14,5 +14,6 @@ screenshot (mobile app)
 </a>
 
 ### to do:
-* <del>change occupancy over time plot</del>
+* show NAs in daily plot
 * <del>change source for daily plot</del>
+* <del>change occupancy over time plot</del>
