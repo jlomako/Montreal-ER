@@ -14,4 +14,4 @@ screenshot (mobile app)
 </a>
 
 ### to do:
-* change source for daily plot
+<del>* change source for daily plot</del>
