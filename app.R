@@ -9,20 +9,45 @@
 # install.packages("shiny")
 
 library(shiny)
-library(vroom)
 library(tidyverse)
+library(vroom)
 
-# use data from my repository
-data <- vroom::vroom("https://github.com/jlomako/pdfscraper/raw/main/data/daily_data.csv", show_col_types = FALSE)
-
-# get values
-hospitals <- names(data[2:22])
-max_value <- max(data[,2:22], na.rm=T)
+# get data from repository
+data <- vroom::vroom("https://github.com/jlomako/hospital-occupancy-tracker/raw/main/data/hospitals.csv", show_col_types = FALSE)
 max_date <- max(data$Date)
-# get hospital name with todays max occupancy
-selected_hospital <- names(which.max(data[length(data$Date),2:21]))
-if (is.na(selected_hospital)) { selected_hospital <- "Total Montréal" } 
+max_value <- max(data[,2:23], na.rm=T)
+names(data)[names(data) == "Total"] <- "Total Montréal"
 
+# get hourly data:
+url <- "https://www.msss.gouv.qc.ca/professionnels/statistiques/documents/urgences/Releve_horaire_urgences_7jours.csv"
+df <- read.csv(url, encoding = "latin1") # using read.csv here until vroom can handle french characters
+
+update <- as.Date(df$Mise_a_jour[1])
+update_time <- df$Heure_de_l.extraction_.image.[1]
+update_txt <- paste("\nlast update:", update, "at", update_time)
+
+# select montreal hospitals
+df <- df %>% filter(str_detect(Nom_etablissement, "Montr|CHUM|CUSM|CHU Sainte-Justine")) %>%
+  select(etab = Nom_etablissement, hospital_name = Nom_installation, beds_total = Nombre_de_civieres_fonctionnelles, beds_occ = Nombre_de_civieres_occupees) %>%
+  mutate(beds_total = as.numeric(beds_total), beds_occ = as.numeric(beds_occ)) %>% 
+  select(hospital_name, beds_occ, beds_total)
+## TO DO : remove NA warning: Problem while computing `beds_total = as.numeric(beds_total)`. NAs introduced by coercion 
+
+# calculate total and add to df
+df %>% summarise(sum(beds_total, na.rm=TRUE), sum(beds_occ, na.rm=TRUE)) -> total
+df <- df %>% add_row(hospital_name = "Total Montréal", beds_occ = total[1,2], beds_total = total[1,1] ) %>%
+  mutate(occupancy_rate = round(100*(beds_occ/beds_total)), Date = update) %>%
+  select(Date, hospital_name, occupancy_rate)
+
+# small name change
+new_name <- "Hôpital général Juif Sir Mortimer B. Davis"
+names(data)[names(data) == "L'Hôpital général Juif Sir Mortimer B. Davis"] <- new_name
+df$hospital_name <- str_replace(df$hospital_name, "L'Hôpital général Juif Sir Mortimer B. Davis", new_name)
+
+# sort data
+df <- df[order(-df$occupancy_rate, df$hospital_name),]
+
+hospitals <- df$hospital_name
 
 ui <- bootstrapPage(
   
@@ -37,13 +62,20 @@ ui <- bootstrapPage(
               plotOutput("plot_today"))
       ),
       
+      # occupancy rates over time
+      div(class="row",
+          div(class="col-12", 
+              h2("Occupancy rates over time"),
+              h2("Select a hospital to show occupancy rate over the last few weeks*", class="small"))
+      ),
+      
       # select hospital to show occupancy rate over time
       div(class="row pt-3",
           div(class="col-12", 
               selectInput(inputId = "hospital", 
-                          label = "Select hospital to show occupancy rate over time*", 
+                          label = NULL, 
                           choices = hospitals,
-                          selected = selected_hospital,
+                          # selected = selected_hospital,
                           width = "100%")
           )
       ),
@@ -58,39 +90,34 @@ server <- function(input, output, session) {
   
   # output_today
   output$plot_today <- renderPlot({
-    data %>%
-      mutate(Date = as.character(Date)) %>%
-      filter(Date == max(Date)) %>%
-      pivot_longer(cols = 2:22) %>%
-      filter(name != "Total Montréal") %>%
-      filter(!is.na(value)) %>%
-      ggplot(aes(x = reorder(name, value), y = value, fill = value)) +
+    df %>%
+      filter(hospital_name != "Total Montréal") %>%
+      mutate(occupancy_rate = ifelse(is.na(occupancy_rate), -0.01, occupancy_rate)) %>%
+      ggplot(aes(x = reorder(hospital_name, occupancy_rate), y = occupancy_rate, fill = occupancy_rate)) +
       geom_col(position = "identity", size = 0.5, show.legend = F) +
-      geom_text(aes(label = paste0(value,"%")), hjust = 1, colour = "white", size = 3) +
+      geom_text(aes(label = if_else(occupancy_rate < 0, "data not available", NULL)), colour = "grey", size = 3, hjust = "inward", na.rm=T) +
+      geom_text(aes(label = if_else(occupancy_rate >= 0, paste0(occupancy_rate,"%"), NULL)), colour = "white", size = 3, hjust = 1, na.rm=T) +
       coord_flip() +
-      scale_fill_gradient2(low = "light green", high = "red", mid = "yellow", midpoint = 80) + 
+      scale_fill_gradient2(low = "green", high = "red", mid = "#ffff66", midpoint = 60) + 
       theme_minimal() +
-      labs(x = NULL, y = NULL, caption = paste("last update: ", max_date)) +
+      labs(x = NULL, y = NULL, caption = paste(update_txt)) +
       theme(panel.grid = element_blank(), axis.ticks.x = element_blank(), axis.text.x = element_blank())
   }, res = 96)
   
-
+  
   # select hospital output  
   selected <- reactive(data %>% select(Date, occupancy = input$hospital))
   output$plot <- renderPlot({
     selected() %>%
       ggplot(aes(Date, occupancy, fill = occupancy)) +
       geom_line(size = 0.5, show.legend = F, na.rm = T) +
-      # geom_col(position = "identity", size = 0.5, show.legend = F, na.rm = T)  +
       scale_x_date(date_labels = "%b %d", date_breaks = "1 week", minor_breaks = "1 day") +
       scale_y_continuous(limits = c(0,max_value), labels = scales::percent_format(scale = 1)) +
       theme_minimal() +
-      labs(y = "Occupancy rate\n", x = NULL, caption = "*occupancy rates are saved at 1 p.m. every day") +
-      # theme(panel.grid.major = element_line()) + # horizontal lines only
-      # scale_fill_gradient2(low = "light green", high = "red", mid = "yellow", midpoint = 80) +
+      labs(y = "Occupancy rate\n", x = NULL, caption = "*occupancy rates are saved at 12 a.m. every day") +
       geom_hline(yintercept = 100, col = "red")
   }, res = 96)
-
+  
 }
 
 shinyApp(ui, server)
