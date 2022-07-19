@@ -53,25 +53,25 @@ ui <- bootstrapPage(
   
   # uses bootstrap 5
   theme = bslib::bs_theme(version = 5, bootswatch = "spacelab"),
-  div(class="container-fluid py-4",
+  div(class="container px-3",
       
       # plot today
       div(class="row",
-          div(class="col-12", 
+          div(class="col-lg-10", 
               h2("Occupancy rates in Montreal emergency rooms"),
               plotOutput("plot_today"))
       ),
       
       # occupancy rates over time
       div(class="row",
-          div(class="col-12", 
+          div(class="col-lg-10", 
               h2("Occupancy rates over time"),
               h2("Select a hospital to show occupancy rate over the last few weeks*", class="small"))
       ),
       
       # select hospital to show occupancy rate over time
       div(class="row pt-3",
-          div(class="col-12", 
+          div(class="col-lg-10", 
               selectInput(inputId = "hospital", 
                           label = NULL, 
                           choices = hospitals,
@@ -80,8 +80,17 @@ ui <- bootstrapPage(
           )
       ),
       div(class="row",
-          div(class="col-12", plotOutput("plot"))
+          div(class="col-lg-10", plotOutput("plot"))
       ),
+      
+      # source & disclaimer
+      div(class="row",
+          div(class="col-lg-10 pt-6",
+              h1(" ", class = "pt-6"),
+              h6("Source: Ministère de la Santé et des Services sociaux du Québec", class="small text-center")),
+          h1(" ", class = "pb-6"),
+      ),
+      
   )
 )
 
@@ -96,7 +105,8 @@ server <- function(input, output, session) {
       ggplot(aes(x = reorder(hospital_name, occupancy_rate), y = occupancy_rate, fill = occupancy_rate)) +
       geom_col(position = "identity", size = 0.5, show.legend = F) +
       geom_text(aes(label = if_else(occupancy_rate < 0, "data not available", NULL)), colour = "grey", size = 3, hjust = "inward", na.rm=T) +
-      geom_text(aes(label = if_else(occupancy_rate >= 0, paste0(occupancy_rate,"%"), NULL)), colour = "white", size = 3, hjust = 1, na.rm=T) +
+      geom_text(aes(label = if_else(occupancy_rate >= 0 & occupancy_rate <= 69, paste0(occupancy_rate,"%"), NULL)), colour = "grey", size = 3, hjust = -0.2, na.rm=T) +
+      geom_text(aes(label = if_else(occupancy_rate > 69, paste0(occupancy_rate,"%"), NULL)), colour = "white", size = 3, hjust = 1, na.rm=T) +
       coord_flip() +
       scale_fill_gradient2(low = "green", high = "red", mid = "#ffff66", midpoint = 60) + 
       theme_minimal() +
@@ -114,11 +124,10 @@ server <- function(input, output, session) {
       scale_x_date(date_labels = "%b %d", date_breaks = "1 week", minor_breaks = "1 day") +
       scale_y_continuous(limits = c(0,max_value), labels = scales::percent_format(scale = 1)) +
       theme_minimal() +
-      labs(y = "Occupancy rate\n", x = NULL, caption = "*occupancy rates are saved at 12 a.m. every day") +
+      labs(y = "Occupancy rate*\n", x = NULL, caption = "*occupancy rates at 12 a.m. every day") +
       geom_hline(yintercept = 100, col = "red")
   }, res = 96)
   
 }
 
 shinyApp(ui, server)
-
