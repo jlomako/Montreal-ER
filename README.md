@@ -13,7 +13,10 @@ screenshot (mobile app)
    <img src="img/Screenshot_20220715-181344.png" alt="screenshot" width=15%>
 </a>
 
+### note to myself
+* set wd to script directory to deploy app in R
+
 ### to do:
-* show NAs in daily plot
+* <del>show NAs in daily plot</del>
 * <del>change source for daily plot</del>
 * <del>change occupancy over time plot</del>
