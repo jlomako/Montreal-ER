@@ -125,7 +125,8 @@ server <- function(input, output, session) {
       scale_y_continuous(limits = c(0,max_value), labels = scales::percent_format(scale = 1)) +
       theme_minimal() +
       labs(y = "Occupancy rate*\n", x = NULL, caption = "*occupancy rates at 12 a.m. every day") +
-      geom_hline(yintercept = 100, col = "red")
+      geom_hline(yintercept = 100, col = "red") +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1))
   }, res = 96)
   
 }
