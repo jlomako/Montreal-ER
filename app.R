@@ -88,6 +88,7 @@ ui <- bootstrapPage(
           div(class="col-lg-10 pt-6",
               h1(" ", class = "pt-6"),
               h6("Source: Ministère de la Santé et des Services sociaux du Québec", class="small text-center")),
+              h6("© Copyright 2022, jlomako", class="small text-center"),
           h1(" ", class = "pb-6"),
       ),
       
@@ -112,7 +113,7 @@ server <- function(input, output, session) {
       theme_minimal() +
       labs(x = NULL, y = NULL, caption = paste(update_txt)) +
       theme(panel.grid = element_blank(), axis.ticks.x = element_blank(), axis.text.x = element_blank())
-  }, res = 96)
+  }, res = 96, height = "auto")
   
   
   # select hospital output  
