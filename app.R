@@ -71,7 +71,6 @@ ui <- bootstrapPage(
           div(class="card",
               div(class="card-header bg-primary", h5("Current Occupancy Rate in Montréal ERs", class="card-title")),
               div(class="card-body",
-                  # h5("Current Occupancy Rate in Montréal ERs", class="card-title"),
                   plotOutput("plot_today")
               ),
           ),    
@@ -82,10 +81,8 @@ ui <- bootstrapPage(
   div(class="row pt-5",
       div(class="col-lg-12",
           div(class="card",
-              div(class="card-header bg-primary", h5("ER Occupancy Rates over the last 90 days", class="card-title")),
+              div(class="card-header bg-primary", h5("Occupancy Rates over the past 90 days", class="card-title")),
               div(class="card-body",
-                  # h5("ER Occupancy Rates over the last 90 days", class="card-title"),
-                  
                   div(selectInput(inputId = "hospital", 
                                   label = "Select a hospital", #NULL 
                                   choices = hospitals,
