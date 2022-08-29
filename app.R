@@ -61,51 +61,54 @@ ui <- bootstrapPage(
   
   tags$head(HTML("<title>Occupancy rates in Montréal emergency rooms</title>")),
   
-  #  div(class="container-md",
-  
-  h1("Occupancy rates in Montréal emergency rooms", class="text-center pt-3"),
-  
-  # plot today
-  div(class="row pt-5",
-      div(class="col-lg-12",
-          div(class="card",
-              div(class="card-header bg-primary", h5("Current Occupancy Rate in Montréal ERs", class="card-title")),
-              div(class="card-body",
-                  plotOutput("plot_today")
-              ),
-          ),    
-      ),
-  ),
-  
-  # occupancy rates over time
-  div(class="row pt-5",
-      div(class="col-lg-12",
-          div(class="card",
-              div(class="card-header bg-primary", h5("Occupancy Rates over the past 90 days", class="card-title")),
-              div(class="card-body",
-                  div(selectInput(inputId = "hospital", 
-                                  label = "Select a hospital", #NULL 
-                                  choices = hospitals,
-                                  width = "100%")
+  div(class="container-md px-0",
+      
+      h1("Occupancy rates in Montréal emergency rooms", class="text-center pt-3"),
+      
+      # plot today
+      div(class="row pt-5",
+          div(class="col-lg-12",
+              div(class="card",
+                  div(class="card-header bg-primary", h5("Current Occupancy Rate in Montréal ERs", class="card-title")),
+                  div(class="card-body px-0",
+                      # h5("Current Occupancy Rate in Montréal ERs", class="card-title"),
+                      plotOutput("plot_today")
                   ),
-                  
-                  plotOutput("plot")
-                  
+              ),    
+          ),
+      ),
+      
+      # occupancy rates over time
+      div(class="row pt-5",
+          div(class="col-lg-12",
+              div(class="card",
+                  div(class="card-header bg-primary", h5("Occupancy Rates over the past 90 days", class="card-title")),
+                  div(class="card-body",
+                      # h5("ER Occupancy Rates over the last 90 days", class="card-title"),
+                      
+                      div(selectInput(inputId = "hospital", 
+                                      label = "Select a hospital", #NULL 
+                                      choices = hospitals,
+                                      width = "100%")
+                      ),
+                      
+                      plotOutput("plot")
+                      
+                  ),
               ),
           ),
       ),
+      
+      # source & disclaimer
+      div(class="row",
+          div(class="col-lg-12 pt-6",
+              h1(" ", class = "pt-6"),
+              h6("Source: Ministère de la Santé et des Services sociaux du Québec", class="small text-center")),
+          h6("© Copyright 2022, jlomako", class="small text-center"),
+          h1(" ", class = "pb-6"),
+      ),
+      
   ),
-  
-  # source & disclaimer
-  div(class="row",
-      div(class="col-lg-12 pt-6",
-          h1(" ", class = "pt-6"),
-          h6("Source: Ministère de la Santé et des Services sociaux du Québec", class="small text-center")),
-      h6("© Copyright 2022, jlomako", class="small text-center"),
-      h1(" ", class = "pb-6"),
-  ),
-  
-  #  ),
 )
 
 
@@ -118,6 +121,7 @@ server <- function(input, output, session) {
       mutate(occupancy_rate = ifelse(is.na(occupancy_rate), -0.01, occupancy_rate)) %>%
       ggplot(aes(x = reorder(hospital_name, occupancy_rate), y = occupancy_rate, fill = occupancy_rate)) +
       geom_col(position = "identity", size = 3, show.legend = F) +
+      scale_y_continuous(expand = c(0,0)) + # gets rid of gap between y-axis and plot
       geom_text(aes(label = if_else(occupancy_rate < 0, "data not available", NULL)), colour = "grey", size = 3, hjust = "inward", na.rm=T) +
       geom_text(aes(label = if_else(occupancy_rate >= 0 & occupancy_rate <= 79, paste0(occupancy_rate,"%"), NULL)), colour = "darkgrey", size = 3, hjust = -0.1, position = position_stack(vjust = 0), na.rm=T) +
       geom_text(aes(label = if_else(occupancy_rate > 79, paste0(occupancy_rate,"%"), NULL)), colour = "white", size = 3, hjust = -0.1, position = position_stack(vjust = 0), na.rm=T) +
