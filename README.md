@@ -10,9 +10,4 @@ Interactive app (Shiny) to explore occupancy rates in Montreal emergency rooms.
 
 ### note to myself
 * set wd to script directory to deploy app in R
-
-### to do:
-* adjust plot for narrow screens
-* <del>show NAs in daily plot</del>
-* <del>change source for daily plot</del>
-* <del>change occupancy over time plot</del>
+* reactive expression (e.g. input$hospital) must be within a reactive or render* function <code>selected <- reactive(data %>% select(Date, occupancy = input$hospital))</code>, don't forget parentheses when calling that variable <code>selected()</code>
