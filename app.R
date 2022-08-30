@@ -69,11 +69,11 @@ ui <- bootstrapPage(
       div(class="row pt-5",
           div(class="col-lg-12",
               div(class="card",
-                  div(class="card-header bg-primary", h5("Current Occupancy Rate in Montréal ERs", class="card-title")),
-                  div(class="card-body px-0",
-                      # h5("Current Occupancy Rate in Montréal ERs", class="card-title"),
-                      plotOutput("plot_today")
-                  ),
+                  div(class="card-header bg-primary", h5("Current Occupancy Rates in Montréal ERs", class="card-title")),
+                  div(class="card-body px-0", plotOutput("plot_today")),
+                  div(class="card-footer", h5("The occupancy rate is defined by the total number of patients on stretchers divided by the number of available stretchers.
+                                               Wait times may vary depending on the number of patients and the nature of your illness or injury.",
+                                               class="small"))
               ),    
           ),
       ),
@@ -84,8 +84,6 @@ ui <- bootstrapPage(
               div(class="card",
                   div(class="card-header bg-primary", h5("Occupancy Rates over the past 90 days", class="card-title")),
                   div(class="card-body",
-                      # h5("ER Occupancy Rates over the last 90 days", class="card-title"),
-                      
                       div(selectInput(inputId = "hospital", 
                                       label = "Select a hospital", #NULL 
                                       choices = hospitals,
@@ -101,11 +99,14 @@ ui <- bootstrapPage(
       
       # source & disclaimer
       div(class="row",
-          div(class="col-lg-12 pt-6",
-              h1(" ", class = "pt-6"),
-              h6("Source: Ministère de la Santé et des Services sociaux du Québec", class="small text-center")),
-          h6("© Copyright 2022, jlomako", class="small text-center"),
-          h1(" ", class = "pb-6"),
+          div(class="col-lg-12",
+              h6("Data source: Ministère de la Santé et des Services sociaux du Québec", class="small text-center pt-3"),
+              h6('This website is for informational purposes only. If you are in need of urgent medical treatment, visit your nearest ER or call 9-1-1.
+                 In case of a non-urgent health issue call 8-1-1', 
+                 tags$a(href="https://www.quebec.ca/en/health/finding-a-resource/info-sante-811/", "(Info Santé)"), 
+                 class="small text-center pt-3"),
+              h6("© Copyright 2022, jlomako", class="small text-center py-3")
+              ),
       ),
       
   ),
@@ -122,7 +123,7 @@ server <- function(input, output, session) {
       ggplot(aes(x = reorder(hospital_name, occupancy_rate), y = occupancy_rate, fill = occupancy_rate)) +
       geom_col(position = "identity", size = 3, show.legend = F) +
       scale_y_continuous(expand = c(0,0)) + # gets rid of gap between y-axis and plot
-      geom_text(aes(label = if_else(occupancy_rate < 0, "data not available", NULL)), colour = "grey", size = 3, hjust = "inward", na.rm=T) +
+      geom_text(aes(label = if_else(occupancy_rate < 0, "no data", NULL)), colour = "grey", size = 3, hjust = "inward", na.rm=T) +
       geom_text(aes(label = if_else(occupancy_rate >= 0 & occupancy_rate <= 79, paste0(occupancy_rate,"%"), NULL)), colour = "darkgrey", size = 3, hjust = -0.1, position = position_stack(vjust = 0), na.rm=T) +
       geom_text(aes(label = if_else(occupancy_rate > 79, paste0(occupancy_rate,"%"), NULL)), colour = "white", size = 3, hjust = -0.1, position = position_stack(vjust = 0), na.rm=T) +
       coord_flip() +
@@ -134,7 +135,6 @@ server <- function(input, output, session) {
   
   
   # select hospital output
-  # get last 90 days
   selected <- reactive(data %>% select(Date, occupancy = input$hospital))
   output$plot <- renderPlot({
     selected() %>%
@@ -143,7 +143,7 @@ server <- function(input, output, session) {
       scale_x_date(date_labels = "%a, %b %d", date_breaks = "1 week", minor_breaks = "1 day") +
       scale_y_continuous(limits = c(0,max_value), labels = scales::percent_format(scale = 1)) +
       theme_minimal() +
-      labs(y = "Occupancy rate*\n", x = NULL, caption = "\n*occupancy rates at 12 a.m. every day") +
+      labs(y = "Occupancy rate\n", x = NULL, caption = "\n*occupancy rates at 12 a.m. every day") +
       geom_hline(yintercept = 100, col = "red") +
       theme(axis.text.x = element_text(angle = 90, hjust = 1))
   }, res = 96)
