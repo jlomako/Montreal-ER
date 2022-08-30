@@ -65,7 +65,7 @@ ui <- bootstrapPage(
       
       h1("Occupancy rates in Montréal emergency rooms", class="text-center pt-3"),
       
-      # plot today
+      # card current occupancy 
       div(class="row pt-5",
           div(class="col-lg-12",
               div(class="card",
@@ -78,21 +78,23 @@ ui <- bootstrapPage(
           ),
       ),
       
-      # occupancy rates over time
+      # card occupancy rates over time
       div(class="row pt-5",
           div(class="col-lg-12",
               div(class="card",
-                  div(class="card-header bg-primary", h5("Occupancy Rates over the past 90 days", class="card-title")),
+                  div(class="card-header bg-primary", h5("Occupancy Rates over the past 90 days*", class="card-title")),
                   div(class="card-body",
                       div(selectInput(inputId = "hospital", 
                                       label = "Select a hospital", #NULL 
                                       choices = hospitals,
                                       width = "100%")
-                      ),
-                      
-                      plotOutput("plot")
-                      
-                  ),
+                      ),plotOutput("plot")),
+                  div(class="card-footer", h5('This website is for informational purposes only. If you are in need of urgent medical treatment, visit your nearest ER or call 9-1-1.
+                 In case of a non-urgent health issue call 8-1-1', 
+                                              tags$a(href="https://www.quebec.ca/en/health/finding-a-resource/info-sante-811/", "(Info Santé)"),
+                                              class="small"))
+                  
+                  
               ),
           ),
       ),
@@ -101,11 +103,7 @@ ui <- bootstrapPage(
       div(class="row",
           div(class="col-lg-12",
               h6("Data source: Ministère de la Santé et des Services sociaux du Québec", class="small text-center pt-3"),
-              h6('This website is for informational purposes only. If you are in need of urgent medical treatment, visit your nearest ER or call 9-1-1.
-                 In case of a non-urgent health issue call 8-1-1', 
-                 tags$a(href="https://www.quebec.ca/en/health/finding-a-resource/info-sante-811/", "(Info Santé)"), 
-                 class="small text-center pt-3"),
-              h6("© Copyright 2022, jlomako", class="small text-center py-3")
+              h6("© Copyright 2022, jlomako", class="small text-center")
               ),
       ),
       
@@ -143,7 +141,7 @@ server <- function(input, output, session) {
       scale_x_date(date_labels = "%a, %b %d", date_breaks = "1 week", minor_breaks = "1 day") +
       scale_y_continuous(limits = c(0,max_value), labels = scales::percent_format(scale = 1)) +
       theme_minimal() +
-      labs(y = "Occupancy rate\n", x = NULL, caption = "\n*occupancy rates at 12 a.m. every day") +
+      labs(y = NULL, x = NULL, caption = "\n*occupancy rates at 12 a.m. every day") +
       geom_hline(yintercept = 100, col = "red") +
       theme(axis.text.x = element_text(angle = 90, hjust = 1))
   }, res = 96)
