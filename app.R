@@ -13,6 +13,7 @@ library(dplyr)
 library(ggplot2)
 library(stringr)
 
+
 # get data from repository
 data <- vroom::vroom("https://github.com/jlomako/hospital-occupancy-tracker/raw/main/data/hospitals.csv", show_col_types = FALSE)
 
@@ -44,6 +45,9 @@ df <- df %>% add_row(hospital_name = "Total Montréal", beds_occ = total[1,2], b
   mutate(occupancy_rate = round(100*(beds_occ/beds_total)), Date = update) %>%
   select(Date, hospital_name, occupancy_rate)
 
+# get current max value (for y-axis in weekly plot)
+max_today <- max(df$occupancy_rate, na.rm=T)
+
 # small name change
 new_name <- "Hôpital général Juif Sir Mortimer B. Davis"
 names(data)[names(data) == "L'Hôpital général Juif Sir Mortimer B. Davis"] <- new_name
@@ -69,46 +73,52 @@ ui <- bootstrapPage(
       div(class="row pt-5",
           div(class="col-lg-12",
               div(class="card",
-                  div(class="card-header bg-primary", h5("Current Occupancy Rates in Montréal ERs", class="card-title")),
+                  div(class="card-header bg-primary", h5("Current Occupancy Rates in Montréal", class="card-title")),
                   div(class="card-body px-0", plotOutput("plot_today")),
                   div(class="card-footer", h5("The occupancy rate is defined by the total number of patients on stretchers divided by the number of available stretchers.
                                                Wait times may vary depending on the number of patients and the nature of your illness or injury.",
-                                               class="small"))
+                                              class="small"))
               ),    
           ),
       ),
       
-      # card occupancy rates over time
+      # card with tabs
       div(class="row pt-5",
           div(class="col-lg-12",
               div(class="card",
-                  div(class="card-header bg-primary", h5("Occupancy Rates over the past 90 days*", class="card-title")),
+                  div(class="card-header bg-primary", h5("Select a hospital", class="card-title")),
                   div(class="card-body",
                       div(selectInput(inputId = "hospital", 
-                                      label = "Select a hospital", #NULL 
+                                      label = NULL, # "Select a hospital", #NULL 
                                       choices = hospitals,
                                       width = "100%")
-                      ),plotOutput("plot")),
+                      ),
+                      #   ),
+                      # div(class="card-body",
+                      tabsetPanel(type = "tabs",
+                                  tabPanel("weekly", plotOutput("plot_weekdays")),
+                                  tabPanel("past 90 days", plotOutput("plot"))
+                      ),
+                  ),
                   div(class="card-footer", h5('This website is for informational purposes only. If you are in need of urgent medical treatment, visit your nearest ER or call 9-1-1.
-                 In case of a non-urgent health issue call 8-1-1', 
+                    In case of a non-urgent health issue call 8-1-1', 
                                               tags$a(href="https://www.quebec.ca/en/health/finding-a-resource/info-sante-811/", "(Info Santé)"),
-                                              class="small"))
-                  
-                  
-              ),
-          ),
-      ),
+                                              class="small")),
+              ), # card end
+          ), # col end
+      ), # row end
       
       # source & disclaimer
       div(class="row",
           div(class="col-lg-12",
               h6("Data source: Ministère de la Santé et des Services sociaux du Québec", class="small text-center pt-3"),
-              h6("© Copyright 2022, jlomako", class="small text-center")
-              ),
+              h6("© Copyright 2022, jlomako", class="small text-center"),
+          ),
       ),
-      
   ),
 )
+
+
 
 
 server <- function(input, output, session) {
@@ -132,8 +142,42 @@ server <- function(input, output, session) {
   }, res = 96, height = "auto")
   
   
-  # select hospital output
+  # select hospital and get data for selected hospital
   selected <- reactive(data %>% select(Date, occupancy = input$hospital))
+  
+  # get current occupancy value for selected hospital
+  occupancy_current <- reactive(filter(df, str_detect(hospital_name, input$hospital))[1,3])
+  # OBS! don't forget parenthesis when calling these variables! => occupancy_current()
+  
+  weekday_current <- lubridate::wday(update, label = T)
+  
+  # plot_weekdays: means for each day
+  output$plot_weekdays <- renderPlot({
+    # layer for current selected occupancy, if no data available print text
+    if (is.na(occupancy_current())) {
+      p <- annotate("text", x=weekday_current, y=10, label = "", colour = "white", size = 2) 
+      # geom_col(aes(x=weekday_current, y=0, alpha = 0.1), position = "identity", show.legend = F)
+    } else {
+      p <- geom_col(aes(x=weekday_current, y=occupancy_current(), fill = occupancy_current(), alpha = 0.1), position = "identity", show.legend = F)
+    }
+    # get data and plot    
+    selected() %>%
+      # filter(Date >= (Sys.Date()-30)) %>%
+      mutate(day_number = as.POSIXlt(Date)$wday+1) %>% # Sun = 1, Mon = 2 etc
+      group_by(day_number) %>% 
+      summarise(occupancy_mean = round(mean(occupancy, na.rm=T))) %>%
+      ggplot(aes(x = lubridate::wday(day_number, label = T), y = occupancy_mean, fill = occupancy_mean)) +
+      geom_col(position = "identity", show.legend=F, alpha = 0.2, na.rm=T) +
+      scale_y_continuous(limits = c(0,max_today), expand = c(0,0)) +
+      labs(title = input$hospital, y = NULL, x = NULL, caption = NULL) +
+      geom_hline(yintercept=100, linetype="dashed", color = "red") +
+      theme_minimal() +
+      scale_fill_gradient2(low = "yellow", high = "red") + 
+      theme(panel.grid = element_blank(), axis.ticks.y = element_blank(), axis.text.y = element_blank()) + 
+      p # layer for current selected occupancy
+  }, res = 96)
+  
+  # plot: past 90 days
   output$plot <- renderPlot({
     selected() %>%
       ggplot(aes(Date, occupancy, fill = occupancy)) +
@@ -141,7 +185,7 @@ server <- function(input, output, session) {
       scale_x_date(date_labels = "%a, %b %d", date_breaks = "1 week", minor_breaks = "1 day") +
       scale_y_continuous(limits = c(0,max_value), labels = scales::percent_format(scale = 1)) +
       theme_minimal() +
-      labs(y = NULL, x = NULL, caption = "\n*occupancy rates at 12 a.m. every day") +
+      labs(title = input$hospital, y = NULL, x = NULL, caption = "\n*occupancy rates at 12 a.m. every day") +
       geom_hline(yintercept = 100, col = "red") +
       theme(axis.text.x = element_text(angle = 90, hjust = 1))
   }, res = 96)
