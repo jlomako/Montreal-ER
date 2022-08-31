@@ -5,7 +5,7 @@
 Interactive app (Shiny) to explore occupancy rates in Montreal emergency rooms.
 <br><br>
 
-<img src="img/Screenshot_20220715-181344.png" alt="screenshot" width=30%>
+<img src="img/Screenshot_20220831-135507.png" alt="screenshot" width=40%>
 
 
 ### note to myself
