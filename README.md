@@ -10,4 +10,4 @@ Interactive app (Shiny) to explore occupancy rates in Montreal emergency rooms.
 
 ### note to myself
 * set wd to script directory to deploy app in R
-* reactive expression (e.g. input$hospital) must be within a reactive or render* function <code>selected <- reactive(data %>% select(Date, occupancy = input$hospital))</code>, don't forget parentheses when calling that variable <code>selected()</code>
+* reactive expression must be within a reactive or render* function <code>selected <- reactive(data %>% select(Date, occupancy = input$hospital))</code>, don't forget parentheses when calling that variable <code>selected()</code>
