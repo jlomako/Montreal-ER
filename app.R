@@ -13,7 +13,6 @@ library(dplyr)
 library(ggplot2)
 library(stringr)
 
-
 # get data from repository
 data <- vroom::vroom("https://github.com/jlomako/hospital-occupancy-tracker/raw/main/data/hospitals.csv", show_col_types = FALSE)
 
@@ -55,7 +54,6 @@ df$hospital_name <- str_replace(df$hospital_name, "L'Hôpital général Juif Sir
 
 # sort data
 df <- df[order(-df$occupancy_rate, df$hospital_name),]
-
 hospitals <- df$hospital_name
 
 ui <- bootstrapPage(
@@ -96,7 +94,7 @@ ui <- bootstrapPage(
                       #   ),
                       # div(class="card-body",
                       tabsetPanel(type = "tabs",
-                                  tabPanel("weekly", plotOutput("plot_weekdays")),
+                                  tabPanel("current", plotOutput("plot_weekdays")),
                                   tabPanel("past 90 days", plotOutput("plot"))
                       ),
                   ),
@@ -156,7 +154,6 @@ server <- function(input, output, session) {
     # layer for current selected occupancy, if no data available print text
     if (is.na(occupancy_current())) {
       p <- annotate("text", x=weekday_current, y=10, label = "", colour = "white", size = 2) 
-      # geom_col(aes(x=weekday_current, y=0, alpha = 0.1), position = "identity", show.legend = F)
     } else {
       p <- geom_col(aes(x=weekday_current, y=occupancy_current(), fill = occupancy_current(), alpha = 0.1), position = "identity", show.legend = F)
     }
@@ -186,10 +183,11 @@ server <- function(input, output, session) {
       scale_y_continuous(limits = c(0,max_value), labels = scales::percent_format(scale = 1)) +
       theme_minimal() +
       labs(title = input$hospital, y = NULL, x = NULL, caption = "\n*occupancy rates at 12 a.m. every day") +
-      geom_hline(yintercept = 100, col = "red") +
+      geom_hline(yintercept = 100, linetype="dashed", col = "red") +
       theme(axis.text.x = element_text(angle = 90, hjust = 1))
   }, res = 96)
   
 }
 
 shinyApp(ui, server)
+
