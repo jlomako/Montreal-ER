@@ -2,8 +2,9 @@
 # Occupancy app
 
 ## <a href = "https://jlomako.shinyapps.io/occupancy_app/">https://jlomako.shinyapps.io/occupancy_app/</a>
-Interactive app (Shiny) to explore occupancy rates in Montreal emergency rooms.
+Shiny app that tracks occupancy rates in Montréal emergency rooms.
 <br><br>
+
 
 <img src="img/Screenshot_20220831-135507.png" alt="screenshot" width=40%>
 
