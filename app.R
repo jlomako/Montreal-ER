@@ -179,8 +179,8 @@ server <- function(input, output, session) {
     selected() %>%
       ggplot(aes(Date, occupancy, fill = occupancy)) +
       geom_line(size = 0.5, show.legend = F, na.rm = T) +
-      scale_x_date(date_labels = "%a, %b %d", date_breaks = "1 week", minor_breaks = "1 day") +
-      scale_y_continuous(limits = c(0,max_value), labels = scales::percent_format(scale = 1)) +
+      scale_x_date(expand = c(0,0), date_labels = "%a, %b %d", date_breaks = "1 week", minor_breaks = "1 day") +
+      scale_y_continuous(expand = c(0,0), limits = c(0,max_value), labels = scales::percent_format(scale = 1)) +
       theme_minimal() +
       labs(title = input$hospital, y = NULL, x = NULL, caption = "\n*occupancy rates at 12 a.m. every day") +
       geom_hline(yintercept = 100, linetype="dashed", col = "red") +
