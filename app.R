@@ -165,7 +165,7 @@ server <- function(input, output, session) {
       summarise(occupancy_mean = round(mean(occupancy, na.rm=T))) %>%
       ggplot(aes(x = lubridate::wday(day_number, label = T), y = occupancy_mean, fill = occupancy_mean)) +
       geom_col(position = "identity", show.legend=F, alpha = 0.2, na.rm=T) +
-      scale_y_continuous(limits = c(0,max_today), expand = c(0,0)) +
+      scale_y_continuous(limits = c(0,300), expand = c(0,0)) + # OBS!!! max_today
       labs(title = input$hospital, y = NULL, x = NULL, caption = NULL) +
       geom_hline(yintercept=100, linetype="dashed", color = "red") +
       theme_minimal() +
