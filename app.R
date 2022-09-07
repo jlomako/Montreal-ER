@@ -154,8 +154,10 @@ server <- function(input, output, session) {
     # layer for current selected occupancy, if no data available print text
     if (is.na(occupancy_current())) {
       p <- annotate("text", x=weekday_current, y=10, label = "", colour = "white", size = 2) 
+      subtitle_txt <- "(No data available)"
     } else {
       p <- geom_col(aes(x=weekday_current, y=occupancy_current(), fill = occupancy_current(), alpha = 0.1), position = "identity", show.legend = F)
+      subtitle_txt <- paste0("Occupancy rate: ", occupancy_current(), "%")
     }
     # get data and plot    
     selected() %>%
@@ -166,11 +168,12 @@ server <- function(input, output, session) {
       ggplot(aes(x = lubridate::wday(day_number, label = T), y = occupancy_mean, fill = occupancy_mean)) +
       geom_col(position = "identity", show.legend=F, alpha = 0.2, na.rm=T) +
       scale_y_continuous(limits = c(0,300), expand = c(0,0)) + # OBS!!! max_today
-      labs(title = input$hospital, y = NULL, x = NULL, caption = NULL) +
+      labs(title = input$hospital, subtitle = subtitle_txt, y = NULL, x = NULL, caption = NULL) +
       geom_hline(yintercept=100, linetype="dashed", color = "red") +
       theme_minimal() +
       scale_fill_gradient2(low = "yellow", high = "red") + 
-      theme(panel.grid = element_blank(), axis.ticks.y = element_blank(), axis.text.y = element_blank()) + 
+      theme(panel.grid = element_blank(), axis.ticks.y = element_blank(), axis.text.y = element_blank(),
+            plot.subtitle=element_text(size=13, color="red")) + 
       p # layer for current selected occupancy
   }, res = 96)
   
@@ -184,10 +187,11 @@ server <- function(input, output, session) {
       theme_minimal() +
       labs(title = input$hospital, y = NULL, x = NULL, caption = "\n*occupancy rates at 12 a.m. every day") +
       geom_hline(yintercept = 100, linetype="dashed", col = "red") +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1))
+      theme(axis.text.x = element_text(angle=90, hjust=0.5, vjust=0.5))
   }, res = 96)
   
 }
 
 shinyApp(ui, server)
+
 
