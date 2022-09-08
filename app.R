@@ -25,7 +25,7 @@ names(data)[names(data) == "Total"] <- "Total Montréal"
 
 # get hourly data:
 url <- "https://www.msss.gouv.qc.ca/professionnels/statistiques/documents/urgences/Releve_horaire_urgences_7jours.csv"
-df <- read.csv(url, encoding = "latin1") # using read.csv here until vroom can handle french characters
+df <- read.csv(url, encoding = "latin1") # using read.csv here because vroom can't handle french characters
 
 update <- as.Date(df$Mise_a_jour[1])
 update_time <- df$Heure_de_l.extraction_.image.[1]
@@ -34,9 +34,8 @@ update_txt <- paste("\nlast update:", update, "at", update_time)
 # select montreal hospitals
 df <- df %>% filter(str_detect(Nom_etablissement, "Montr|CHUM|CUSM|CHU Sainte-Justine")) %>%
   select(etab = Nom_etablissement, hospital_name = Nom_installation, beds_total = Nombre_de_civieres_fonctionnelles, beds_occ = Nombre_de_civieres_occupees) %>%
-  mutate(beds_total = as.numeric(beds_total), beds_occ = as.numeric(beds_occ)) %>% 
+  mutate(beds_total = suppressWarnings(as.numeric(beds_total)), beds_occ = suppressWarnings(as.numeric(beds_occ))) %>% 
   select(hospital_name, beds_occ, beds_total)
-## TO DO : remove NA warning: Problem while computing `beds_total = as.numeric(beds_total)`. NAs introduced by coercion 
 
 # calculate total and add to df
 df %>% summarise(sum(beds_total, na.rm=TRUE), sum(beds_occ, na.rm=TRUE)) -> total
@@ -154,10 +153,10 @@ server <- function(input, output, session) {
     # layer for current selected occupancy, if no data available print text
     if (is.na(occupancy_current())) {
       p <- annotate("text", x=weekday_current, y=10, label = "", colour = "white", size = 2) 
-      subtitle_txt <- "(No data available)"
+      subtitle_txt <- "(Currently no data available)"
     } else {
       p <- geom_col(aes(x=weekday_current, y=occupancy_current(), fill = occupancy_current(), alpha = 0.1), position = "identity", show.legend = F)
-      subtitle_txt <- paste0("Occupancy rate: ", occupancy_current(), "%")
+      subtitle_txt <- paste0("Current occupancy rate: ", occupancy_current(), "%")
     }
     # get data and plot    
     selected() %>%
@@ -165,16 +164,16 @@ server <- function(input, output, session) {
       mutate(day_number = as.POSIXlt(Date)$wday+1) %>% # Sun = 1, Mon = 2 etc
       group_by(day_number) %>% 
       summarise(occupancy_mean = round(mean(occupancy, na.rm=T))) %>%
-      ggplot(aes(x = lubridate::wday(day_number, label = T), y = occupancy_mean, fill = occupancy_mean)) +
-      geom_col(position = "identity", show.legend=F, alpha = 0.2, na.rm=T) +
-      scale_y_continuous(limits = c(0,300), expand = c(0,0)) + # OBS!!! max_today
-      labs(title = input$hospital, subtitle = subtitle_txt, y = NULL, x = NULL, caption = NULL) +
-      geom_hline(yintercept=100, linetype="dashed", color = "red") +
-      theme_minimal() +
-      scale_fill_gradient2(low = "yellow", high = "red") + 
-      theme(panel.grid = element_blank(), axis.ticks.y = element_blank(), axis.text.y = element_blank(),
-            plot.subtitle=element_text(size=13, color="red")) + 
-      p # layer for current selected occupancy
+        ggplot(aes(x = lubridate::wday(day_number, label = T), y = occupancy_mean, fill = occupancy_mean)) +
+        geom_col(position = "identity", show.legend=F, alpha = 0.2, na.rm=T) +
+        scale_y_continuous(limits = c(0,300), expand = c(0,0)) + # OBS!!! max_today
+        labs(title = input$hospital, subtitle = subtitle_txt, y = NULL, x = NULL, caption = NULL) +
+        geom_hline(yintercept=100, linetype="dashed", color = "red") +
+        theme_minimal() +
+        scale_fill_gradient2(low = "yellow", high = "red") + 
+        theme(panel.grid = element_blank(), axis.ticks.y = element_blank(), axis.text.y = element_blank(),
+              plot.subtitle=element_text(size=12, color="#666666")) + 
+        p # layer for selected occupancy
   }, res = 96)
   
   # plot: past 90 days
@@ -193,5 +192,4 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server)
-
 
