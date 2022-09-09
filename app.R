@@ -62,14 +62,14 @@ ui <- bootstrapPage(
   
   tags$head(HTML("<title>Occupancy rates in Montréal emergency rooms</title>")),
   
-  div(class="container-md px-0",
+  div(class="container-sm px-0",
       
-      h1("Occupancy rates in Montréal emergency rooms", class="text-center pt-3"),
+      h1("Occupancy rates in Montréal emergency rooms", class="text-center pt-2"),
       
       # card current occupancy 
-      div(class="row pt-5",
-          div(class="col-lg-12",
-              div(class="card",
+      div(class="row",
+          div(class="col-sm-6 py-2",
+              div(class="card h-100",
                   div(class="card-header bg-primary", h5("Current Occupancy Rates in Montréal", class="card-title")),
                   div(class="card-body px-0", plotOutput("plot_today")),
                   div(class="card-footer", h5("The occupancy rate is defined by the total number of patients on stretchers divided by the number of available stretchers.
@@ -77,12 +77,12 @@ ui <- bootstrapPage(
                                               class="small"))
               ),    
           ),
-      ),
+
       
       # card with tabs
-      div(class="row pt-5",
-          div(class="col-lg-12",
-              div(class="card",
+
+          div(class="col-sm-6 py-2",
+              div(class="card h-100",
                   div(class="card-header bg-primary", h5("Select a hospital", class="card-title")),
                   div(class="card-body",
                       div(selectInput(inputId = "hospital", 
