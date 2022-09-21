@@ -12,6 +12,34 @@ library(shiny)
 library(dplyr)
 library(ggplot2)
 library(stringr)
+library(leaflet)
+
+# coordinates for map
+df_map <- read.csv(textConnection(
+  "hospital_name,Lat,Long
+Hôpital général Juif Sir Mortimer B. Davis,45.4974528,-73.6311184
+Hôpital de Montréal pour enfants,45.473545,-73.600998
+Hôpital Royal Victoria,45.472946, -73.601992
+Hôpital général de Montréal,45.4969179,-73.588787
+Hôpital Maisonneuve-Rosemont,45.573915, -73.558440
+Centre hospitalier de l'Université de Montréal,45.511430, -73.557637
+Hôpital général du Lakeshore,45.449043, -73.833057
+CHU Sainte-Justine,45.5027504,-73.6243993
+Institut universitaire en santé mentale Douglas,45.4430317,-73.5849744
+Hôpital de LaSalle,45.4200411,-73.6233353
+Hôpital Jean-Talon,45.5459821,-73.609411
+Centre hospitalier de St. Mary,45.4947796,-73.6239577
+Hôpital du Sacré-Coeur de Montréal,45.5338504,-73.7137721
+Hôpital de Verdun,45.4638829,-73.563649
+Campus Lachine,45.441135,-73.6767911
+Hôpital Santa Cabrini,45.5804396,-73.5713617
+Hôpital Notre-Dame,45.5255337,-73.5627179
+Hôpital Fleury,45.5718874,-73.6499032
+Institut de Cardiologie de Montréal,45.5749028,-73.578271
+Pavillon Albert-Prévost,45.5285988,-73.7293315
+Institut universitaire en santé mentale de Montréal,45.5886861,-73.530235"
+))
+
 
 # get data from repository
 data <- vroom::vroom("https://github.com/jlomako/hospital-occupancy-tracker/raw/main/data/hospitals.csv", show_col_types = FALSE)
@@ -55,6 +83,16 @@ df$hospital_name <- str_replace(df$hospital_name, "L'Hôpital général Juif Sir
 df <- df[order(-df$occupancy_rate, df$hospital_name),]
 hospitals <- df$hospital_name
 
+# merge occupancy_rate to df_map for map plotting
+df_map <- df_map %>% 
+  left_join(df, by = c("hospital_name")) %>%
+  select(-Date)
+
+# colors for circles on map
+pal_red <- colorNumeric(palette = "YlOrRd", domain = df_map$occupancy_rate) # "YlOrRd"
+pal_green <- colorNumeric(palette = "RdYlGn", reverse=T, domain = df_map$occupancy_rate)
+
+
 ui <- bootstrapPage(
   
   # uses bootstrap 5
@@ -71,7 +109,13 @@ ui <- bootstrapPage(
           div(class="col-sm-6 py-2",
               div(class="card h-100",
                   div(class="card-header bg-primary", h5("Current Occupancy Rates in Montréal", class="card-title")),
-                  div(class="card-body px-0", plotOutput("plot_today")),
+                  # div(class="card-body px-0", plotOutput("plot_today")),
+                  div(class="card-body px-0", 
+                      tabsetPanel(type = "tabs",
+                                  tabPanel("view chart", plotOutput("plot_today")),
+                                  tabPanel("view map", leafletOutput("map"))
+                                  ) 
+                      ),
                   div(class="card-footer", h5("The occupancy rate is defined by the total number of patients on stretchers divided by the number of available stretchers.
                                                Wait times may vary depending on the number of patients and the nature of your illness or injury.",
                                               class="small"))
@@ -188,6 +232,20 @@ server <- function(input, output, session) {
       geom_hline(yintercept = 100, linetype="dashed", col = "red") +
       theme(axis.text.x = element_text(angle=90, hjust=0.5, vjust=0.5))
   }, res = 96)
+  
+  
+  # leaflet map
+  output$map <- renderLeaflet({
+    leaflet(df_map) %>% addProviderTiles(providers$CartoDB.Voyager) %>% # providers$OpenStreetMap, CartoDB.Voyager
+      addCircleMarkers(lng = ~Long, lat = ~Lat, 
+        label = ~htmltools::htmlEscape(paste0(hospital_name, ": ", occupancy_rate, " %")), 
+        color = ~ifelse(occupancy_rate >= 89, pal_red(occupancy_rate), pal_green(occupancy_rate)),
+        fillOpacity = 0.8,
+        stroke = FALSE
+      ) %>%
+      setView(lng = -73.62440, lat = 45.50275, zoom = 11)
+  } # close renderLeaflet
+  ) # close map
   
 }
 
