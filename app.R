@@ -4,10 +4,6 @@
 #
 ######################################################################
 
-# install.packages("vroom")
-# install.packages("tidyverse")
-# install.packages("shiny")
-
 library(shiny)
 library(dplyr)
 library(ggplot2)
@@ -173,10 +169,12 @@ server <- function(input, output, session) {
       geom_col(position = "identity", size = 3, show.legend = F) +
       scale_y_continuous(expand = c(0,0)) + # gets rid of gap between y-axis and plot
       geom_text(aes(label = if_else(occupancy_rate < 0, "no data", NULL)), colour = "grey", size = 3, hjust = "inward", na.rm=T) +
-      geom_text(aes(label = if_else(occupancy_rate >= 0 & occupancy_rate <= 79, paste0(occupancy_rate,"%"), NULL)), colour = "darkgrey", size = 3, hjust = -0.1, position = position_stack(vjust = 0), na.rm=T) +
-      geom_text(aes(label = if_else(occupancy_rate > 79, paste0(occupancy_rate,"%"), NULL)), colour = "white", size = 3, hjust = -0.1, position = position_stack(vjust = 0), na.rm=T) +
+      geom_text(aes(label = if_else(occupancy_rate >= 0 & occupancy_rate <= 49, paste0(occupancy_rate,"%"), NULL)), colour = "#595959", size = 3, hjust = -0.1, position = position_stack(vjust = 0), na.rm=T) +
+      geom_text(aes(label = if_else(occupancy_rate > 49, paste0(occupancy_rate,"%"), NULL)), colour = "white", size = 3, hjust = -0.1, position = position_stack(vjust = 0), na.rm=T) +
       coord_flip() +
-      scale_fill_gradient2(low = "green", high = "red", mid = "#ffff66", midpoint = 60) + 
+      scale_fill_distiller(palette = "YlOrRd", direction = 1, 
+                           limits = c(0,max(df$occupancy_rate))) + # YlOrRd RdYlGn
+      # scale_fill_gradient2(low = "green", high = "red", mid = "#ffff66", midpoint = 60) + 
       theme_minimal() +
       labs(x = NULL, y = NULL, caption = paste(update_txt)) +
       theme(panel.grid = element_blank(), axis.ticks.x = element_blank(), axis.text.x = element_blank())
@@ -238,10 +236,11 @@ server <- function(input, output, session) {
   output$map <- renderLeaflet({
     leaflet(df_map) %>% addProviderTiles(providers$CartoDB.Voyager) %>% # providers$OpenStreetMap, CartoDB.Voyager
       addCircleMarkers(lng = ~Long, lat = ~Lat, 
-        label = ~htmltools::htmlEscape(paste0(hospital_name, ": ", occupancy_rate, " %")), 
-        color = ~ifelse(occupancy_rate >= 89, pal_red(occupancy_rate), pal_green(occupancy_rate)),
-        fillOpacity = 0.8,
-        stroke = FALSE
+        label = ~paste0(hospital_name, ": ", occupancy_rate, " %"), 
+        # color = ~ifelse(occupancy_rate >= 89, pal_red(occupancy_rate), pal_green(occupancy_rate)),
+        stroke = T, color = "black", weight = 0.5, # borders around circles
+        fillColor = ~pal_red(occupancy_rate), 
+        fillOpacity = 0.8
       ) %>%
       setView(lng = -73.62440, lat = 45.50275, zoom = 11)
   } # close renderLeaflet
