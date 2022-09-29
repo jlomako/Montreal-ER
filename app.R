@@ -107,9 +107,9 @@ ui <- bootstrapPage(
                   div(class="card-header bg-primary", h5("Current Occupancy Rates in Montréal", class="card-title")),
                   # div(class="card-body px-0", plotOutput("plot_today")),
                   div(class="card-body px-0", 
-                      tabsetPanel(type = "tabs",
-                                  tabPanel("view chart", plotOutput("plot_today")),
-                                  tabPanel("view map", leafletOutput("map"))
+                      tabsetPanel(id = "tabs", type = "tabs",
+                                  tabPanel(value = "tab1", "view chart", plotOutput("plot_today")),
+                                  tabPanel(value = "tab2","view map", leafletOutput("map"))
                                   ) 
                       ),
                   div(class="card-footer", h5("The occupancy rate is defined by the total number of patients on stretchers divided by the number of available stretchers.
@@ -232,20 +232,23 @@ server <- function(input, output, session) {
   }, res = 96)
   
   
-  # leaflet map
-  output$map <- renderLeaflet({
-    leaflet(df_map) %>% addProviderTiles(providers$CartoDB.Voyager) %>% # providers$OpenStreetMap, CartoDB.Voyager
-      addCircleMarkers(lng = ~Long, lat = ~Lat, 
-        label = ~paste0(hospital_name, ": ", occupancy_rate, " %"), 
-        # color = ~ifelse(occupancy_rate >= 89, pal_red(occupancy_rate), pal_green(occupancy_rate)),
-        stroke = T, color = "black", weight = 0.5, # borders around circles
-        fillColor = ~pal_red(occupancy_rate), 
-        fillOpacity = 0.8
-      ) %>%
-      setView(lng = -73.62440, lat = 45.50275, zoom = 11)
-  } # close renderLeaflet
-  ) # close map
-  
+  # render leaflet when switching to second tab
+  observeEvent(input$tabs,{
+    if(input$tabs == "tab2")
+      output$map <- renderLeaflet({
+        leaflet(df_map) %>% addProviderTiles(providers$CartoDB.Voyager) %>% # providers$OpenStreetMap, CartoDB.Voyager
+          addCircleMarkers(lng = ~Long, lat = ~Lat, 
+                           label = ~paste0(hospital_name, ": ", occupancy_rate, " %"), 
+                           # color = ~ifelse(occupancy_rate >= 89, pal_red(occupancy_rate), pal_green(occupancy_rate)),
+                           stroke = T, color = "black", weight = 0.5, # borders around circles
+                           fillColor = ~pal_red(occupancy_rate), 
+                           fillOpacity = 0.8
+          ) %>%
+          setView(lng = -73.62440, lat = 45.50275, zoom = 11)
+      } # close renderLeaflet
+      ) # close map
+  }) # close Event
+   
 }
 
 shinyApp(ui, server)
