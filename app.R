@@ -54,6 +54,8 @@ df <- read.csv(url, encoding = "latin1") # using read.csv here because vroom can
 update <- as.Date(df$Mise_a_jour[1])
 update_time <- df$Heure_de_l.extraction_.image.[1]
 update_txt <- paste("\nlast update:", update, "at", update_time)
+weekday_current <- lubridate::wday(update, label = T)
+
 
 # select montreal hospitals
 df <- df %>% filter(str_detect(Nom_etablissement, "Montr|CHUM|CUSM|CHU Sainte-Justine")) %>%
@@ -76,6 +78,7 @@ names(data)[names(data) == "L'Hôpital général Juif Sir Mortimer B. Davis"] <-
 df$hospital_name <- str_replace(df$hospital_name, "L'Hôpital général Juif Sir Mortimer B. Davis", new_name)
 
 # sort data
+df <- filter(df, hospital_name != "Total Montréal")
 df <- df[order(-df$occupancy_rate, df$hospital_name),]
 hospitals <- df$hospital_name
 
@@ -86,7 +89,6 @@ df_map <- df_map %>%
 
 # colors for circles on map
 pal_red <- colorNumeric(palette = "YlOrRd", domain = df_map$occupancy_rate) # "YlOrRd"
-pal_green <- colorNumeric(palette = "RdYlGn", reverse=T, domain = df_map$occupancy_rate)
 
 
 ui <- bootstrapPage(
@@ -172,9 +174,7 @@ server <- function(input, output, session) {
       geom_text(aes(label = if_else(occupancy_rate >= 0 & occupancy_rate <= 49, paste0(occupancy_rate,"%"), NULL)), colour = "#595959", size = 3, hjust = -0.1, position = position_stack(vjust = 0), na.rm=T) +
       geom_text(aes(label = if_else(occupancy_rate > 49, paste0(occupancy_rate,"%"), NULL)), colour = "white", size = 3, hjust = -0.1, position = position_stack(vjust = 0), na.rm=T) +
       coord_flip() +
-      scale_fill_distiller(palette = "YlOrRd", direction = 1, 
-                           limits = c(0,max(df$occupancy_rate))) + # YlOrRd RdYlGn
-      # scale_fill_gradient2(low = "green", high = "red", mid = "#ffff66", midpoint = 60) + 
+      scale_fill_distiller(palette = "YlOrRd", direction = 1, limits = c(0,max(df$occupancy_rate))) + 
       theme_minimal() +
       labs(x = NULL, y = NULL, caption = paste(update_txt)) +
       theme(panel.grid = element_blank(), axis.ticks.x = element_blank(), axis.text.x = element_blank())
@@ -186,33 +186,31 @@ server <- function(input, output, session) {
   
   # get current occupancy value for selected hospital
   occupancy_current <- reactive(filter(df, str_detect(hospital_name, input$hospital))[1,3])
-  # OBS! don't forget parenthesis when calling these variables! => occupancy_current()
-  
-  weekday_current <- lubridate::wday(update, label = T)
+  # OBS! don't forget parenthesis => occupancy_current()
   
   # plot_weekdays: means for each day
   output$plot_weekdays <- renderPlot({
-    # layer for current selected occupancy, if no data available print text
+    # layer for current selected occupancy, if no data available print only hidden text
     if (is.na(occupancy_current())) {
-      p <- annotate("text", x=weekday_current, y=10, label = "", colour = "white", size = 2) 
+      p <- annotate("text", x=weekday_current, y=10, label = "", colour = "white", size = 0) 
       subtitle_txt <- "(Currently no data available)"
     } else {
-      p <- geom_col(aes(x=weekday_current, y=occupancy_current(), fill = occupancy_current(), alpha = 0.1), position = "identity", show.legend = F)
+      p <- geom_col(aes(x=weekday_current, y=occupancy_current(), fill = occupancy_current()), position = "identity", show.legend = F)
       subtitle_txt <- paste0("Current occupancy rate: ", occupancy_current(), "%")
     }
     # get data and plot    
     selected() %>%
-      # filter(Date >= (Sys.Date()-30)) %>%
+      # filter(Date >= (Sys.Date()-90)) %>%
       mutate(day_number = as.POSIXlt(Date)$wday+1) %>% # Sun = 1, Mon = 2 etc
       group_by(day_number) %>% 
       summarise(occupancy_mean = round(mean(occupancy, na.rm=T))) %>%
         ggplot(aes(x = lubridate::wday(day_number, label = T), y = occupancy_mean, fill = occupancy_mean)) +
-        geom_col(position = "identity", show.legend=F, alpha = 0.2, na.rm=T) +
+        geom_col(position = "identity", show.legend=F, alpha = 0.15, na.rm=T) +
         scale_y_continuous(limits = c(0,300), expand = c(0,0)) + # OBS!!! max_today
         labs(title = input$hospital, subtitle = subtitle_txt, y = NULL, x = NULL, caption = NULL) +
         geom_hline(yintercept=100, linetype="dashed", color = "red") +
         theme_minimal() +
-        scale_fill_gradient2(low = "yellow", high = "red") + 
+        scale_fill_gradient(low = "brown2", high = "brown2") + # colors for week-cols and current cols
         theme(panel.grid = element_blank(), axis.ticks.y = element_blank(), axis.text.y = element_blank(),
               plot.subtitle=element_text(size=12, color="#666666")) + 
         p # layer for selected occupancy
@@ -221,12 +219,13 @@ server <- function(input, output, session) {
   # plot: past 90 days
   output$plot <- renderPlot({
     selected() %>%
+      # filter(Date >= (Sys.Date()-90)) %>%
       ggplot(aes(Date, occupancy, fill = occupancy)) +
       geom_line(size = 0.5, show.legend = F, na.rm = T) +
       scale_x_date(expand = c(0,0), date_labels = "%a, %b %d", date_breaks = "1 week", minor_breaks = "1 day") +
       scale_y_continuous(expand = c(0,0), limits = c(0,max_value), labels = scales::percent_format(scale = 1)) +
       theme_minimal() +
-      labs(title = input$hospital, y = NULL, x = NULL, caption = "\n*occupancy rates at 12 a.m. every day") +
+      labs(title = input$hospital, y = NULL, x = NULL, caption = "") +
       geom_hline(yintercept = 100, linetype="dashed", col = "red") +
       theme(axis.text.x = element_text(angle=90, hjust=0.5, vjust=0.5))
   }, res = 96)
@@ -236,10 +235,9 @@ server <- function(input, output, session) {
   observeEvent(input$tabs,{
     if(input$tabs == "tab2")
       output$map <- renderLeaflet({
-        leaflet(df_map) %>% addProviderTiles(providers$CartoDB.Voyager) %>% # providers$OpenStreetMap, CartoDB.Voyager
+        leaflet(df_map) %>% addProviderTiles(providers$CartoDB.Voyager) %>% 
           addCircleMarkers(lng = ~Long, lat = ~Lat, 
                            label = ~paste0(hospital_name, ": ", occupancy_rate, " %"), 
-                           # color = ~ifelse(occupancy_rate >= 89, pal_red(occupancy_rate), pal_green(occupancy_rate)),
                            stroke = T, color = "black", weight = 0.5, # borders around circles
                            fillColor = ~pal_red(occupancy_rate), 
                            fillOpacity = 0.8
@@ -248,7 +246,7 @@ server <- function(input, output, session) {
       } # close renderLeaflet
       ) # close map
   }) # close Event
-   
+  
 }
 
 shinyApp(ui, server)
