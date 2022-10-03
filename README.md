@@ -9,7 +9,7 @@ App is interactive and mobile-friendly.
 
 
 ## preview:
-<img src="Screenshot_20220927-155300.png" alt="screenshot" width=40%>
+<img src="Screenshot_20221003-112537.png" alt="screenshot" width=40%>
 <br>
 https://jlomako.shinyapps.io/occupancy_app/
 
