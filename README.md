@@ -3,7 +3,7 @@
 See current occupancy rates for emergency rooms in Montréal. Hospitals are ranked from highest to lowest occupancy.
 Click on the map to see which ERs are near you.
 Select a hospital to see average occupancy rates over the week or over the past 90 days.
-A new feature predicts the occupancy rate for the next 7 days.
+A new feature predicts the occupancy for the next 7 days.
 App is interactive and mobile-friendly.
 
 
