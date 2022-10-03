@@ -10,54 +10,25 @@ library(ggplot2)
 library(stringr)
 library(leaflet)
 
-# coordinates for map
-df_map <- read.csv(textConnection(
-  "hospital_name,Lat,Long
-Hôpital général Juif Sir Mortimer B. Davis,45.4974528,-73.6311184
-Hôpital de Montréal pour enfants,45.473545,-73.600998
-Hôpital Royal Victoria,45.472946, -73.601992
-Hôpital général de Montréal,45.4969179,-73.588787
-Hôpital Maisonneuve-Rosemont,45.573915, -73.558440
-Centre hospitalier de l'Université de Montréal,45.511430, -73.557637
-Hôpital général du Lakeshore,45.449043, -73.833057
-CHU Sainte-Justine,45.5027504,-73.6243993
-Institut universitaire en santé mentale Douglas,45.4430317,-73.5849744
-Hôpital de LaSalle,45.4200411,-73.6233353
-Hôpital Jean-Talon,45.5459821,-73.609411
-Centre hospitalier de St. Mary,45.4947796,-73.6239577
-Hôpital du Sacré-Coeur de Montréal,45.5338504,-73.7137721
-Hôpital de Verdun,45.4638829,-73.563649
-Campus Lachine,45.441135,-73.6767911
-Hôpital Santa Cabrini,45.5804396,-73.5713617
-Hôpital Notre-Dame,45.5255337,-73.5627179
-Hôpital Fleury,45.5718874,-73.6499032
-Institut de Cardiologie de Montréal,45.5749028,-73.578271
-Pavillon Albert-Prévost,45.5285988,-73.7293315
-Institut universitaire en santé mentale de Montréal,45.5886861,-73.530235"
-))
+# get data files
+source("helper.R")
 
 
-# get data from repository
-data <- vroom::vroom("https://github.com/jlomako/hospital-occupancy-tracker/raw/main/data/hospitals.csv", show_col_types = FALSE)
-
-# get last 90 days
+# get last 90 days from repository
 data <- data %>% filter(Date >= (Sys.Date()-90))
 
 max_date <- max(data$Date)
 max_value <- max(data[,2:23], na.rm=T)
 names(data)[names(data) == "Total"] <- "Total Montréal"
 
-# get hourly data:
-url <- "https://www.msss.gouv.qc.ca/professionnels/statistiques/documents/urgences/Releve_horaire_urgences_7jours.csv"
-df <- read.csv(url, encoding = "latin1") # using read.csv here because vroom can't handle french characters
-
+# df = data from mssss  
 update <- as.Date(df$Mise_a_jour[1])
 update_time <- df$Heure_de_l.extraction_.image.[1]
 update_txt <- paste("\nlast update:", update, "at", update_time)
 weekday_current <- lubridate::wday(update, label = T)
 
 
-# select montreal hospitals
+# select hospitals
 df <- df %>% filter(str_detect(Nom_etablissement, "Montr|CHUM|CUSM|CHU Sainte-Justine")) %>%
   select(etab = Nom_etablissement, hospital_name = Nom_installation, beds_total = Nombre_de_civieres_fonctionnelles, beds_occ = Nombre_de_civieres_occupees) %>%
   mutate(beds_total = suppressWarnings(as.numeric(beds_total)), beds_occ = suppressWarnings(as.numeric(beds_occ))) %>% 
@@ -72,10 +43,11 @@ df <- df %>% add_row(hospital_name = "Total Montréal", beds_occ = total[1,2], b
 # get current max value (for y-axis in weekly plot)
 max_today <- max(df$occupancy_rate, na.rm=T)
 
-# small name change
+# small name changes
 new_name <- "Hôpital général Juif Sir Mortimer B. Davis"
 names(data)[names(data) == "L'Hôpital général Juif Sir Mortimer B. Davis"] <- new_name
 df$hospital_name <- str_replace(df$hospital_name, "L'Hôpital général Juif Sir Mortimer B. Davis", new_name)
+plot_predictions$name <- str_replace(plot_predictions$name, "L'Hôpital général Juif Sir Mortimer B. Davis", new_name)
 
 # sort data
 df <- filter(df, hospital_name != "Total Montréal")
@@ -88,7 +60,7 @@ df_map <- df_map %>%
   select(-Date)
 
 # colors for circles on map
-pal_red <- colorNumeric(palette = "YlOrRd", domain = df_map$occupancy_rate) # "YlOrRd"
+pal_red <- colorNumeric(palette = "YlOrRd", domain = df_map$occupancy_rate)
 
 
 ui <- bootstrapPage(
@@ -135,8 +107,9 @@ ui <- bootstrapPage(
                       #   ),
                       # div(class="card-body",
                       tabsetPanel(type = "tabs",
-                                  tabPanel("current", plotOutput("plot_weekdays")),
-                                  tabPanel("past 90 days", plotOutput("plot"))
+                                  tabPanel("today", plotOutput("plot_weekdays")),
+                                  tabPanel("past 90 days", plotOutput("plot")),
+                                  tabPanel("next week", plotOutput("plot_prediction"))
                       ),
                   ),
                   div(class="card-footer", h5('This website is for informational purposes only. If you are in need of urgent medical treatment, visit your nearest ER or call 9-1-1.
@@ -189,6 +162,7 @@ server <- function(input, output, session) {
   # OBS! don't forget parenthesis => occupancy_current()
   
   # plot_weekdays: means for each day
+  # OBS! uses date from msss file because of timezone
   output$plot_weekdays <- renderPlot({
     # layer for current selected occupancy, if no data available print only hidden text
     if (is.na(occupancy_current())) {
@@ -200,10 +174,10 @@ server <- function(input, output, session) {
     }
     # get data and plot    
     selected() %>%
-      # filter(Date >= (Sys.Date()-90)) %>%
+      filter(Date >= (Sys.Date()-31)) %>%
       mutate(day_number = as.POSIXlt(Date)$wday+1) %>% # Sun = 1, Mon = 2 etc
       group_by(day_number) %>% 
-      summarise(occupancy_mean = round(mean(occupancy, na.rm=T))) %>%
+      summarise(occupancy_mean = round(median(occupancy, na.rm=T))) %>%
         ggplot(aes(x = lubridate::wday(day_number, label = T), y = occupancy_mean, fill = occupancy_mean)) +
         geom_col(position = "identity", show.legend=F, alpha = 0.15, na.rm=T) +
         scale_y_continuous(limits = c(0,300), expand = c(0,0)) + # OBS!!! max_today
@@ -230,8 +204,26 @@ server <- function(input, output, session) {
       theme(axis.text.x = element_text(angle=90, hjust=0.5, vjust=0.5))
   }, res = 96)
   
+  # plot prediction for next week
+  # OBS! uses date from msss file because of timezone
+  output$plot_prediction <- renderPlot({
+    plot_predictions %>% filter(name == input$hospital) %>%
+      filter(Date >= update+1 & Date <= update+7) %>%  
+      ggplot(aes(x = as.Date(Date), y = yhat, alpha = 0.8)) + 
+      geom_line(col="darkblue", size = 1) + 
+      geom_ribbon(aes(ymin = yhat_lower, ymax = yhat_upper, fill = "band"), alpha = 0.1) + 
+      scale_fill_manual(values = c("blue")) +
+      scale_x_date(date_labels = "%a\n%b %d", breaks = "1 day", minor_breaks = "1 day") +
+      scale_y_continuous(limits = c(1,299), expand = c(0,0), labels = scales::percent_format(scale = 1)) +
+      geom_hline(yintercept = 100, linetype="dashed", col = "darkblue") +
+      theme_minimal() + 
+      labs(title = input$hospital, y = NULL, x = NULL, caption = "") +
+      theme(legend.position="none", axis.ticks.y = element_blank())
+  }, res = 96)
+  
   
   # render leaflet when switching to second tab
+  # inside observeEvent because map disappeared on mobile
   observeEvent(input$tabs,{
     if(input$tabs == "tab2")
       output$map <- renderLeaflet({
