@@ -43,14 +43,16 @@ df <- df %>% add_row(hospital_name = "Total Montréal", beds_occ = total[1,2], b
 # get current max value (for y-axis in weekly plot)
 max_today <- max(df$occupancy_rate, na.rm=T)
 
-# small name changes
+# some name changes
 new_name <- "Hôpital général Juif Sir Mortimer B. Davis"
 names(data)[names(data) == "L'Hôpital général Juif Sir Mortimer B. Davis"] <- new_name
 df$hospital_name <- str_replace(df$hospital_name, "L'Hôpital général Juif Sir Mortimer B. Davis", new_name)
 plot_predictions$name <- str_replace(plot_predictions$name, "L'Hôpital général Juif Sir Mortimer B. Davis", new_name)
+plot_predictions$name <- str_replace(plot_predictions$name, "Total", "Total Montréal")
+
 
 # sort data
-df <- filter(df, hospital_name != "Total Montréal")
+# df <- filter(df, hospital_name != "Total Montréal")
 df <- df[order(-df$occupancy_rate, df$hospital_name),]
 hospitals <- df$hospital_name
 
