@@ -1,4 +1,4 @@
-## Track current occupancy rates in Montréal emergency rooms in Shiny app: 
+## Track current occupancy rates in Montréal emergency rooms: 
 ### <a href="https://jlomako.shinyapps.io/occupancy_app/">Launch app</a>
 
 It can be difficult to find medical treatment in Montréal. This shiny app shows you which hospitals are busiest in Montréal. 
