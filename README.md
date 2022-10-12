@@ -6,7 +6,7 @@ The app is updated every hour, and for each hospital, you can see the average oc
 The app is mobile-friendly and interactive, making it easy for users to find the information they need.
 This shiny app is hosted on <a href="https://jlomako.shinyapps.io/occupancy_app/">shinyapps.io</a>.
 
-Il peut être difficile de se soigner à Montréal. Cette application Shiny vous montre quelles salle d'urgence sont les plus occupées à Montréal. L'application est mise à jour toutes les heures et, pour chaque hôpital, vous pouvez voir le taux d'occupation moyen sur une semaine, ainsi que l'occupation des 90 derniers jours. Une nouvelle fonctionnalité prédit l'occupation des 7 prochains jours pour chaque hôpital. La carte vous montre où se trouvent les urgences. L'application est adaptée aux mobiles et interactive, ce qui permet aux utilisateurs de trouver facilement les informations dont ils ont besoin. 
+Il peut être difficile de trouver des soins médicaux à Montréal. Cette application Shiny vous montre quelles salle d'urgence sont les plus occupées à Montréal. L'application est mise à jour toutes les heures et, pour chaque hôpital, vous pouvez voir le taux d'occupation moyen sur une semaine, ainsi que l'occupation des 90 derniers jours. Une nouvelle fonctionnalité prédit l'occupation des 7 prochains jours pour chaque hôpital. La carte vous montre où se trouvent les urgences. L'application est adaptée aux mobiles et interactive, ce qui permet aux utilisateurs de trouver facilement les informations dont ils ont besoin. 
 
 ## preview:
 <img src="Screenshot_20221003-112537.png" alt="screenshot" width=40%>
