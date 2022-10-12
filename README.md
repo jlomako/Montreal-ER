@@ -16,5 +16,6 @@ https://jlomako.shinyapps.io/occupancy_app/
 ### note to myself
 * set wd to script directory to deploy app in R
 * reactive expression must be within a reactive or render* function <code>selected <- reactive(data %>% select(Date, occupancy = input$hospital))</code>, don't forget parentheses when calling that variable <code>selected()</code>
-* shiny uses backup data from pdfscraper, since there are no updates since Sep 14 -- note: back to usual on Sep 20
-* predictions are done by prophet-bot
+* long-term data is collected by <a href="https://github.com/jlomako/hospital-occupancy-tracker">hospital-occupancy-tracker</a> and <a href="https://github.com/jlomako/pdfscraper">pdfscraper</a> (backup)
+* predictions are done by <a href="https://github.com/jlomako/prophet-bot">prophet-bot</a>
+
