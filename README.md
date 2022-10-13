@@ -15,7 +15,6 @@ Cette application Shiny vous montre quelles salle d'urgence sont les plus occup√
 ## preview:
 <img src="Screenshot_20221003-112537.png" alt="screenshot" width=40%>
 <br>
-https://jlomako.shinyapps.io/occupancy_app/
 
 ### note to myself
 * set wd to script directory to deploy app in R
