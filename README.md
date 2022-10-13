@@ -2,7 +2,11 @@
 ### <a href="https://jlomako.shinyapps.io/occupancy_app/">Launch app</a>
 
 This Shiny app shows you which emergency rooms are busiest in Montréal. 
-The app is updated every hour. For each hospital, you can track the average occupancy rates over the week, as well as the occupancy over the past 90 days. A new feature predicts the occupancy for the next 7 days for each hospital. The map shows you where the ERs are located.
+The app is updated every hour to show the current occupancy for each ER.
+For each hospital, you can track the median occupancy rates over the week, 
+as well as the occupancy over the past 90 days. 
+It can predict the occupancy for the next week, based on data that was collected over time.
+The app has a map, so users can see where the hospitals are located.
 The app is mobile-friendly and interactive, making it easy for users to find the information they need.
 This shiny app is hosted on <a href="https://jlomako.shinyapps.io/occupancy_app/">shinyapps.io</a>.
 
