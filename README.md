@@ -22,4 +22,5 @@ https://jlomako.shinyapps.io/occupancy_app/
 * reactive expression must be within a reactive or render* function <code>selected <- reactive(data %>% select(Date, occupancy = input$hospital))</code>, don't forget parentheses when calling that variable <code>selected()</code>
 * long-term data is collected by <a href="https://github.com/jlomako/hospital-occupancy-tracker">hospital-occupancy-tracker</a> and <a href="https://github.com/jlomako/pdfscraper">pdfscraper</a> (backup)
 * predictions are done by <a href="https://github.com/jlomako/prophet-bot">prophet-bot</a>
+* app was re-named and has moved to new address: https://jlomako.shinyapps.io/Montreal_ER/
 
