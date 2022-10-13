@@ -4,6 +4,7 @@
 #
 ######################################################################
 
+
 library(shiny)
 library(dplyr)
 library(ggplot2)
@@ -124,9 +125,10 @@ ui <- bootstrapPage(
       
       # source & disclaimer
       div(class="row",
-          div(class="col-lg-12",
-              h6("Data source: Ministère de la Santé et des Services sociaux du Québec", class="small text-center pt-3"),
-              h6("© Copyright 2022, jlomako", class="small text-center"),
+          div(class="col-lg-12 text-center",
+              div(HTML("Data source: Ministère de la Santé et des Services sociaux du Québec<br>© Copyright 2022,"),
+                  tags$a(href="https://github.com/jlomako", "jlomako")
+              ),
           ),
       ),
   ),
@@ -182,12 +184,13 @@ server <- function(input, output, session) {
       summarise(occupancy_mean = round(median(occupancy, na.rm=T))) %>%
         ggplot(aes(x = lubridate::wday(day_number, label = T), y = occupancy_mean, fill = occupancy_mean)) +
         geom_col(position = "identity", show.legend=F, alpha = 0.15, na.rm=T) +
-        scale_y_continuous(limits = c(0,300), expand = c(0,0)) + # OBS!!! max_today
+        scale_y_continuous(limits = c(0,299), expand = c(0,0), labels = scales::percent_format(scale = 1)) + # OBS!!! max_today
         labs(title = input$hospital, subtitle = subtitle_txt, y = NULL, x = NULL, caption = NULL) +
         geom_hline(yintercept=100, linetype="dashed", color = "red") +
+        geom_hline(yintercept = 200, linetype="dashed", col = "lightgrey") +
         theme_minimal() +
         scale_fill_gradient(low = "brown2", high = "brown2") + # colors for week-cols and current cols
-        theme(panel.grid = element_blank(), axis.ticks.y = element_blank(), axis.text.y = element_blank(),
+        theme(panel.grid = element_blank(), # axis.ticks.y = element_blank(), axis.text.y = element_blank(),
               plot.subtitle=element_text(size=12, color="#666666")) + 
         p # layer for selected occupancy
   }, res = 96)
@@ -195,13 +198,13 @@ server <- function(input, output, session) {
   # plot: past 90 days
   output$plot <- renderPlot({
     selected() %>%
-      # filter(Date >= (Sys.Date()-90)) %>%
+      # filter(Date >= (update-90)) %>%
       ggplot(aes(Date, occupancy, fill = occupancy)) +
       geom_line(size = 0.5, show.legend = F, na.rm = T) +
       scale_x_date(expand = c(0,0), date_labels = "%a, %b %d", date_breaks = "1 week", minor_breaks = "1 day") +
       scale_y_continuous(expand = c(0,0), limits = c(0,max_value), labels = scales::percent_format(scale = 1)) +
       theme_minimal() +
-      labs(title = input$hospital, y = NULL, x = NULL, caption = "") +
+      labs(title = input$hospital, y = NULL, x = NULL, caption = "\n*occupancy rates at 11am every day") +
       geom_hline(yintercept = 100, linetype="dashed", col = "red") +
       theme(axis.text.x = element_text(angle=90, hjust=0.5, vjust=0.5))
   }, res = 96)
@@ -216,10 +219,10 @@ server <- function(input, output, session) {
       geom_ribbon(aes(ymin = yhat_lower, ymax = yhat_upper, fill = "band"), alpha = 0.1) + 
       scale_fill_manual(values = c("blue")) +
       scale_x_date(date_labels = "%a\n%b %d", breaks = "1 day", minor_breaks = "1 day") +
-      scale_y_continuous(limits = c(1,299), expand = c(0,0), labels = scales::percent_format(scale = 1)) +
+      scale_y_continuous(limits = c(0,299), expand = c(0,0), labels = scales::percent_format(scale = 1)) +
       geom_hline(yintercept = 100, linetype="dashed", col = "darkblue") +
       theme_minimal() + 
-      labs(title = input$hospital, y = NULL, x = NULL, caption = "") +
+      labs(title = input$hospital, y = NULL, x = NULL, caption = "\n*predicted occupancy rate at 11am") +
       theme(legend.position="none", axis.ticks.y = element_blank())
   }, res = 96)
   
@@ -244,4 +247,3 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server)
-
