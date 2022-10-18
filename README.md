@@ -1,4 +1,4 @@
-## Track current occupancy rates in Montréal emergency rooms: 
+## Montréal Emergency Room Tracker 
 ### <a href="https://jlomako.shinyapps.io/Montreal_ER/">Open app</a>
 
 This app shows you which emergency rooms are busiest in Montréal. 
