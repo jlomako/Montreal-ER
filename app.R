@@ -20,7 +20,7 @@ data <- data %>% filter(Date >= (Sys.Date()-90))
 
 max_date <- max(data$Date)
 max_value <- max(data[,2:23], na.rm=T)
-names(data)[names(data) == "Total"] <- "Total Montréal"
+names(data)[names(data) == "Total"] <- "Total MontrÃ©al"
 
 # df = data from mssss  
 update <- as.Date(df$Mise_a_jour[1])
@@ -37,7 +37,7 @@ df <- df %>% filter(str_detect(Nom_etablissement, "Montr|CHUM|CUSM|CHU Sainte-Ju
 
 # calculate total and add to df
 df %>% summarise(sum(beds_total, na.rm=TRUE), sum(beds_occ, na.rm=TRUE)) -> total
-df <- df %>% add_row(hospital_name = "Total Montréal", beds_occ = total[1,2], beds_total = total[1,1] ) %>%
+df <- df %>% add_row(hospital_name = "Total MontrÃ©al", beds_occ = total[1,2], beds_total = total[1,1] ) %>%
   mutate(occupancy_rate = round(100*(beds_occ/beds_total)), Date = update) %>%
   select(Date, hospital_name, occupancy_rate)
 
@@ -45,15 +45,15 @@ df <- df %>% add_row(hospital_name = "Total Montréal", beds_occ = total[1,2], b
 max_today <- max(df$occupancy_rate, na.rm=T)
 
 # some name changes
-new_name <- "Hôpital général Juif Sir Mortimer B. Davis"
-names(data)[names(data) == "L'Hôpital général Juif Sir Mortimer B. Davis"] <- new_name
-df$hospital_name <- str_replace(df$hospital_name, "L'Hôpital général Juif Sir Mortimer B. Davis", new_name)
-plot_predictions$name <- str_replace(plot_predictions$name, "L'Hôpital général Juif Sir Mortimer B. Davis", new_name)
-plot_predictions$name <- str_replace(plot_predictions$name, "Total", "Total Montréal")
+new_name <- "HÃ´pital gÃ©nÃ©ral Juif Sir Mortimer B. Davis"
+names(data)[names(data) == "L'HÃ´pital gÃ©nÃ©ral Juif Sir Mortimer B. Davis"] <- new_name
+df$hospital_name <- str_replace(df$hospital_name, "L'HÃ´pital gÃ©nÃ©ral Juif Sir Mortimer B. Davis", new_name)
+plot_predictions$name <- str_replace(plot_predictions$name, "L'HÃ´pital gÃ©nÃ©ral Juif Sir Mortimer B. Davis", new_name)
+plot_predictions$name <- str_replace(plot_predictions$name, "Total", "Total MontrÃ©al")
 
 
 # sort data
-# df <- filter(df, hospital_name != "Total Montréal")
+# df <- filter(df, hospital_name != "Total MontrÃ©al")
 df <- df[order(-df$occupancy_rate, df$hospital_name),]
 hospitals <- df$hospital_name
 
@@ -71,17 +71,17 @@ ui <- bootstrapPage(
   # uses bootstrap 5
   theme = bslib::bs_theme(version = 5, bootswatch = "spacelab"),
   
-  tags$head(HTML("<title>Occupancy rates in Montréal emergency rooms</title>")),
+  tags$head(HTML("<title>Montreal Emergency Room Tracker</title>")),
   
   div(class="container-sm px-0",
       
-      h1("Occupancy rates in Montréal emergency rooms", class="text-center pt-2"),
+      h1("MontrÃ©al Emergency Room Tracker", class="text-center pt-2"),
       
       # card current occupancy 
       div(class="row",
           div(class="col-sm-6 py-2",
               div(class="card h-100",
-                  div(class="card-header bg-primary", h5("Current Occupancy Rates in Montréal", class="card-title")),
+                  div(class="card-header bg-primary", h5("Current Occupancy Rates in MontrÃ©al", class="card-title")),
                   # div(class="card-body px-0", plotOutput("plot_today")),
                   div(class="card-body px-0", 
                       tabsetPanel(id = "tabs", type = "tabs",
@@ -117,7 +117,7 @@ ui <- bootstrapPage(
                   ),
                   div(class="card-footer", h5('This website is for informational purposes only. If you are in need of urgent medical treatment, visit your nearest ER or call 9-1-1.
                     In case of a non-urgent health issue call 8-1-1', 
-                                              tags$a(href="https://www.quebec.ca/en/health/finding-a-resource/info-sante-811/", "(Info Santé)"),
+                                              tags$a(href="https://www.quebec.ca/en/health/finding-a-resource/info-sante-811/", "(Info SantÃ©)"),
                                               class="small")),
               ), # card end
           ), # col end
@@ -126,7 +126,7 @@ ui <- bootstrapPage(
       # source & disclaimer
       div(class="row",
           div(class="col-lg-12 text-center",
-              div(HTML("Data source: Ministère de la Santé et des Services sociaux du Québec<br>© Copyright 2022,"),
+              div(HTML("Data source: MinistÃ¨re de la SantÃ© et des Services sociaux du QuÃ©bec<br>Â© Copyright 2022,"),
                   tags$a(href="https://github.com/jlomako", "jlomako")
               ),
           ),
@@ -142,7 +142,7 @@ server <- function(input, output, session) {
   # output_today
   output$plot_today <- renderPlot({
     df %>%
-      filter(hospital_name != "Total Montréal") %>%
+      filter(hospital_name != "Total MontrÃ©al") %>%
       mutate(occupancy_rate = ifelse(is.na(occupancy_rate), -0.01, occupancy_rate)) %>%
       ggplot(aes(x = reorder(hospital_name, occupancy_rate), y = occupancy_rate, fill = occupancy_rate)) +
       geom_col(position = "identity", size = 3, show.legend = F) +
@@ -247,3 +247,4 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server)
+
