@@ -1,6 +1,7 @@
 ######################################################################
 #
-# Occupancy rates in Montreal emergency rooms
+# Occupancy rates in Montreal Emergency Rooms
+# incl. occupancies for all of Quebec (map)
 #
 ######################################################################
 
@@ -16,54 +17,70 @@ source("helper.R")
 
 
 # get last 90 days from repository
-data <- data %>% filter(Date >= (Sys.Date()-90))
+df_longterm <- df_longterm %>% filter(Date >= (Sys.Date()-90))
 
-max_date <- max(data$Date)
-max_value <- max(data[,2:23], na.rm=T)
-names(data)[names(data) == "Total"] <- "Total MontrÃ©al"
+max_date <- max(df_longterm$Date)
+max_value <- max(df_longterm[,2:23], na.rm=T)
+names(df_longterm)[names(df_longterm) == "Total"] <- "Total Montréal"
 
+# get times
 # df = data from mssss  
 update <- as.Date(df$Mise_a_jour[1])
 update_time <- df$Heure_de_l.extraction_.image.[1]
 update_txt <- paste("\nlast update:", update, "at", update_time)
 weekday_current <- lubridate::wday(update, label = T)
 
-
-# select hospitals
-df <- df %>% filter(str_detect(Nom_etablissement, "Montr|CHUM|CUSM|CHU Sainte-Justine")) %>%
+# get hospital data and calculate occupancy_rate for each hospital
+df <- df %>%
   select(etab = Nom_etablissement, hospital_name = Nom_installation, beds_total = Nombre_de_civieres_fonctionnelles, beds_occ = Nombre_de_civieres_occupees) %>%
-  mutate(beds_total = suppressWarnings(as.numeric(beds_total)), beds_occ = suppressWarnings(as.numeric(beds_occ))) %>% 
-  select(hospital_name, beds_occ, beds_total)
+  mutate(beds_total = suppressWarnings(as.numeric(beds_total)), beds_occ = suppressWarnings(as.numeric(beds_occ))) %>%
+  mutate(occupancy_rate = round(100*(beds_occ/beds_total)), Date = update) %>%
+  select(Date, etab, hospital_name, beds_occ, beds_total, occupancy_rate)
 
-# calculate total and add to df
-df %>% summarise(sum(beds_total, na.rm=TRUE), sum(beds_occ, na.rm=TRUE)) -> total
-df <- df %>% add_row(hospital_name = "Total MontrÃ©al", beds_occ = total[1,2], beds_total = total[1,1] ) %>%
+# some name changes
+new_name <- "Hôpital général Juif Sir Mortimer B. Davis"
+names(df_longterm)[names(df_longterm) == "L'Hôpital général Juif Sir Mortimer B. Davis"] <- new_name
+df_predictions$name <- str_replace(df_predictions$name, "L'Hôpital général Juif Sir Mortimer B. Davis", new_name)
+df_predictions$name <- str_replace(df_predictions$name, "Total", "Total Montréal")
+df$hospital_name <- str_replace(df$hospital_name, "L'Hôpital général Juif Sir Mortimer B. Davis", new_name)
+df$hospital_name <- str_replace(df$hospital_name, "Hôpital, CLSC et Centre d'hébergement de Roberval", "Roberval Hôpital")
+df$hospital_name <- str_replace(df$hospital_name, "Centre multiservices de santé et services sociaux Christ-Roi", "Centre Christ-Roi")
+df$hospital_name <- str_replace(df$hospital_name, "Hôpital, CLSC et Centre d'hébergement d'Asbestos", "Hôpital d'Asbestos")
+
+# left join df with coordinates data - for plotting later
+df_map <- df %>% 
+  left_join(df_map, by = c("hospital_name")) %>%
+  select(-Date)
+
+
+# select hospitals for montreal
+df_montreal <- df %>% filter(str_detect(etab, "Montr|CHUM|CUSM|CHU Sainte-Justine")) %>%
+  select(hospital_name, beds_occ, beds_total, occupancy_rate)
+
+# calculate total for montreal and add row to df_montreal
+df_montreal %>% summarise(sum(beds_total, na.rm=TRUE), sum(beds_occ, na.rm=TRUE)) -> total
+df_montreal <- df_montreal %>% add_row(hospital_name = "Total Montréal", beds_occ = total[1,2], beds_total = total[1,1] ) %>%
   mutate(occupancy_rate = round(100*(beds_occ/beds_total)), Date = update) %>%
   select(Date, hospital_name, occupancy_rate)
 
-# get current max value (for y-axis in weekly plot)
-max_today <- max(df$occupancy_rate, na.rm=T)
-
-# some name changes
-new_name <- "HÃ´pital gÃ©nÃ©ral Juif Sir Mortimer B. Davis"
-names(data)[names(data) == "L'HÃ´pital gÃ©nÃ©ral Juif Sir Mortimer B. Davis"] <- new_name
-df$hospital_name <- str_replace(df$hospital_name, "L'HÃ´pital gÃ©nÃ©ral Juif Sir Mortimer B. Davis", new_name)
-plot_predictions$name <- str_replace(plot_predictions$name, "L'HÃ´pital gÃ©nÃ©ral Juif Sir Mortimer B. Davis", new_name)
-plot_predictions$name <- str_replace(plot_predictions$name, "Total", "Total MontrÃ©al")
+# get current max value for montreal (for y-axis in weekly plot)
+max_today <- max(df_montreal$occupancy_rate, na.rm=T)
 
 
-# sort data
-# df <- filter(df, hospital_name != "Total MontrÃ©al")
-df <- df[order(-df$occupancy_rate, df$hospital_name),]
-hospitals <- df$hospital_name
+# sort data, get hospital names for selector
+# df_montreal <- filter(df_montreal, hospital_name != "Total Montréal")
+df_montreal <- df_montreal[order(-df_montreal$occupancy_rate, df_montreal$hospital_name),]
+hospitals <- df_montreal$hospital_name
 
-# merge occupancy_rate to df_map for map plotting
-df_map <- df_map %>% 
-  left_join(df, by = c("hospital_name")) %>%
-  select(-Date)
 
 # colors for circles on map
 pal_red <- colorNumeric(palette = "YlOrRd", domain = df_map$occupancy_rate)
+
+# create labels for map
+df_map$content <- sprintf(paste0("<b>",df_map$hospital_name,"</b><br>",
+                         "Occupancy: ", df_map$occupancy_rate, "&#37;",
+                       "<br>Stretchers in use: ", df_map$beds_occ, " / ", df_map$beds_total)) %>%
+  lapply(htmltools::HTML)
 
 
 ui <- bootstrapPage(
@@ -71,27 +88,29 @@ ui <- bootstrapPage(
   # uses bootstrap 5
   theme = bslib::bs_theme(version = 5, bootswatch = "spacelab"),
   
-  tags$head(HTML("<title>Montreal Emergency Room Tracker</title>")),
+  tags$head(HTML("<title>Montréal Emergency Room Tracker</title>")),
   
   div(class="container-sm px-0",
       
-      h1("MontrÃ©al Emergency Room Tracker", class="text-center pt-2"),
+      h1("Montréal Emergency Room Tracker", class="text-center pt-2"),
       
       # card current occupancy 
       div(class="row",
           div(class="col-sm-6 py-2",
               div(class="card h-100",
-                  div(class="card-header bg-primary", h5("Current Occupancy Rates in MontrÃ©al", class="card-title")),
-                  # div(class="card-body px-0", plotOutput("plot_today")),
+                  div(class="card-header bg-primary", h5("Current Occupancy Rates in Montréal", class="card-title")),
                   div(class="card-body px-0", 
                       tabsetPanel(id = "tabs", type = "tabs",
                                   tabPanel(value = "tab1", "view chart", plotOutput("plot_today")),
                                   tabPanel(value = "tab2","view map", leafletOutput("map"))
                                   ) 
                       ),
-                  div(class="card-footer", h5("The occupancy rate is defined by the total number of patients on stretchers divided by the number of available stretchers.
-                                               Wait times may vary depending on the number of patients and the nature of your illness or injury.",
+                  div(class="card-footer", h5("The occupancy rate refers to the percentage of stretchers that are occupied by patients. 
+                                              An occupancy rate of over 100% indicates that the emergency room is over capacity, 
+                                              typically meaning that there are more patients than there are stretchers.",
                                               class="small"))
+                  # "The occupancy rate is defined by the total number of patients on stretchers divided by the number of available stretchers.
+                  #  Wait times may vary depending on the number of patients and the nature of your illness or injury."
               ),    
           ),
 
@@ -103,12 +122,10 @@ ui <- bootstrapPage(
                   div(class="card-header bg-primary", h5("Select a hospital", class="card-title")),
                   div(class="card-body",
                       div(selectInput(inputId = "hospital", 
-                                      label = NULL, # "Select a hospital", #NULL 
+                                      label = NULL,
                                       choices = hospitals,
                                       width = "100%")
                       ),
-                      #   ),
-                      # div(class="card-body",
                       tabsetPanel(type = "tabs",
                                   tabPanel("today", plotOutput("plot_weekdays")),
                                   tabPanel("past 90 days", plotOutput("plot")),
@@ -116,8 +133,8 @@ ui <- bootstrapPage(
                       ),
                   ),
                   div(class="card-footer", h5('This website is for informational purposes only. If you are in need of urgent medical treatment, visit your nearest ER or call 9-1-1.
-                    In case of a non-urgent health issue call 8-1-1', 
-                                              tags$a(href="https://www.quebec.ca/en/health/finding-a-resource/info-sante-811/", "(Info SantÃ©)"),
+                                               In case of a non-urgent health issue call 8-1-1', 
+                                              tags$a(href="https://www.quebec.ca/en/health/finding-a-resource/info-sante-811/", "(Info Santé)"),
                                               class="small")),
               ), # card end
           ), # col end
@@ -126,7 +143,7 @@ ui <- bootstrapPage(
       # source & disclaimer
       div(class="row",
           div(class="col-lg-12 text-center",
-              div(HTML("Data source: MinistÃ¨re de la SantÃ© et des Services sociaux du QuÃ©bec<br>Â© Copyright 2022,"),
+              div(HTML("Data source: Ministère de la Santé et des Services sociaux du Québec<br>© Copyright 2022,"),
                   tags$a(href="https://github.com/jlomako", "jlomako")
               ),
           ),
@@ -141,17 +158,18 @@ server <- function(input, output, session) {
   
   # output_today
   output$plot_today <- renderPlot({
-    df %>%
-      filter(hospital_name != "Total MontrÃ©al") %>%
+    df_montreal %>%
+      filter(hospital_name != "Total Montréal") %>%
       mutate(occupancy_rate = ifelse(is.na(occupancy_rate), -0.01, occupancy_rate)) %>%
       ggplot(aes(x = reorder(hospital_name, occupancy_rate), y = occupancy_rate, fill = occupancy_rate)) +
       geom_col(position = "identity", size = 3, show.legend = F) +
       scale_y_continuous(expand = c(0,0)) + # gets rid of gap between y-axis and plot
       geom_text(aes(label = if_else(occupancy_rate < 0, "no data", NULL)), colour = "grey", size = 3, hjust = "inward", na.rm=T) +
-      geom_text(aes(label = if_else(occupancy_rate >= 0 & occupancy_rate <= 49, paste0(occupancy_rate,"%"), NULL)), colour = "#595959", size = 3, hjust = -0.1, position = position_stack(vjust = 0), na.rm=T) +
-      geom_text(aes(label = if_else(occupancy_rate > 49, paste0(occupancy_rate,"%"), NULL)), colour = "white", size = 3, hjust = -0.1, position = position_stack(vjust = 0), na.rm=T) +
+      geom_text(aes(label = if_else(occupancy_rate >= 0 & occupancy_rate <= 50, paste0(occupancy_rate,"%"), NULL)), colour = "#595959", size = 3, hjust = -0.1, position = position_stack(vjust = 0), na.rm=T) +
+      geom_text(aes(label = if_else(occupancy_rate > 50, paste0(occupancy_rate,"%"), NULL)), colour = "white", size = 3, hjust = -0.1, position = position_stack(vjust = 0), na.rm=T) +
       coord_flip() +
-      scale_fill_distiller(palette = "YlOrRd", direction = 1, limits = c(0,max(df$occupancy_rate))) + 
+      scale_fill_distiller(palette = "YlOrRd", direction = 1, limits = c(0,max(df_map$occupancy_rate))) + # palette based on all of quebec
+      # scale_fill_distiller(palette = "YlOrRd", direction = 1, limits = c(0,max(df_montreal$occupancy_rate))) + # palette based on montreal
       theme_minimal() +
       labs(x = NULL, y = NULL, caption = paste(update_txt)) +
       theme(panel.grid = element_blank(), axis.ticks.x = element_blank(), axis.text.x = element_blank())
@@ -159,10 +177,10 @@ server <- function(input, output, session) {
   
   
   # select hospital and get data for selected hospital
-  selected <- reactive(data %>% select(Date, occupancy = input$hospital))
+  selected <- reactive(df_longterm %>% select(Date, occupancy = input$hospital))
   
   # get current occupancy value for selected hospital
-  occupancy_current <- reactive(filter(df, str_detect(hospital_name, input$hospital))[1,3])
+  occupancy_current <- reactive(filter(df_montreal, str_detect(hospital_name, input$hospital))[1,3])
   # OBS! don't forget parenthesis => occupancy_current()
   
   # plot_weekdays: means for each day
@@ -212,7 +230,7 @@ server <- function(input, output, session) {
   # plot prediction for next week
   # OBS! uses date from msss file because of timezone
   output$plot_prediction <- renderPlot({
-    plot_predictions %>% filter(name == input$hospital) %>%
+    df_predictions %>% filter(name == input$hospital) %>%
       filter(Date >= update+1 & Date <= update+7) %>%  
       ggplot(aes(x = as.Date(Date), y = yhat, alpha = 0.8)) + 
       geom_line(col="darkblue", size = 1) + 
@@ -229,17 +247,18 @@ server <- function(input, output, session) {
   
   # render leaflet when switching to second tab
   # inside observeEvent because map disappeared on mobile
+  # map includes all of quebec!
   observeEvent(input$tabs,{
     if(input$tabs == "tab2")
       output$map <- renderLeaflet({
         leaflet(df_map) %>% addProviderTiles(providers$CartoDB.Voyager) %>% 
           addCircleMarkers(lng = ~Long, lat = ~Lat, 
-                           label = ~paste0(hospital_name, ": ", occupancy_rate, " %"), 
+                           label = ~content, 
                            stroke = T, color = "black", weight = 0.5, # borders around circles
                            fillColor = ~pal_red(occupancy_rate), 
                            fillOpacity = 0.8
           ) %>%
-          setView(lng = -73.62440, lat = 45.50275, zoom = 11)
+          setView(lng = -73.62440, lat = 45.50275, zoom = 10)
       } # close renderLeaflet
       ) # close map
   }) # close Event
