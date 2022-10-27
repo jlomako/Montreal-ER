@@ -22,4 +22,4 @@ Cette application Shiny vous montre quelles salle d'urgence sont les plus occup√
 * predictions are done by <a href="https://github.com/jlomako/prophet-bot">prophet-bot</a>
 * app was re-named and has moved to new address: https://jlomako.shinyapps.io/Montreal_ER/
 * map shows all of Quebec now
-* matching problem with color palette in chart and map?
+* matching problem with color palette in chart and map? -> maps shows only surrounding hospitals now
