@@ -1,10 +1,9 @@
 ######################################################################
 #
 # Occupancy rates in Montreal Emergency Rooms
-# incl. occupancies for all of Quebec (map)
+# incl. map with surrounding hospitals
 #
 ######################################################################
-
 
 library(shiny)
 library(dplyr)
@@ -12,11 +11,10 @@ library(ggplot2)
 library(stringr)
 library(leaflet)
 
-# get data files
+# load data
 source("helper.R")
 
-
-# get last 90 days from repository
+# get last 90 days
 df_longterm <- df_longterm %>% filter(Date >= (Sys.Date()-90))
 
 max_date <- max(df_longterm$Date)
@@ -30,7 +28,7 @@ update_time <- df$Heure_de_l.extraction_.image.[1]
 update_txt <- paste("\nlast update:", update, "at", update_time)
 weekday_current <- lubridate::wday(update, label = T)
 
-# get hospital data and calculate occupancy_rate for each hospital
+# get current data and calculate occupancy_rate for each hospital
 df <- df %>%
   select(etab = Nom_etablissement, hospital_name = Nom_installation, beds_total = Nombre_de_civieres_fonctionnelles, beds_occ = Nombre_de_civieres_occupees) %>%
   mutate(beds_total = suppressWarnings(as.numeric(beds_total)), beds_occ = suppressWarnings(as.numeric(beds_occ))) %>%
@@ -48,38 +46,38 @@ df$hospital_name <- str_replace(df$hospital_name, "Centre multiservices de sant�
 df$hospital_name <- str_replace(df$hospital_name, "Hôpital, CLSC et Centre d'hébergement d'Asbestos", "Hôpital d'Asbestos")
 
 # left join df with coordinates data - for plotting later
+# filter to show only ERS in montreal and surrounding area - for map
 df_map <- df %>% 
   left_join(df_map, by = c("hospital_name")) %>%
+  filter(str_detect(etab, "Montr|CHUM|CUSM|CHU Sainte-Justine|Laval")|str_detect(hospital_name, "Eustache|Laberge|Lemoyne|Boucher")) %>%
   select(-Date)
 
-
-# select hospitals for montreal
-df_montreal <- df %>% filter(str_detect(etab, "Montr|CHUM|CUSM|CHU Sainte-Justine")) %>%
+# select hospitals for montreal only
+df_montreal <- df %>% 
+  filter(str_detect(etab, "Montr|CHUM|CUSM|CHU Sainte-Justine")) %>%
   select(hospital_name, beds_occ, beds_total, occupancy_rate)
 
 # calculate total for montreal and add row to df_montreal
 df_montreal %>% summarise(sum(beds_total, na.rm=TRUE), sum(beds_occ, na.rm=TRUE)) -> total
 df_montreal <- df_montreal %>% add_row(hospital_name = "Total Montréal", beds_occ = total[1,2], beds_total = total[1,1] ) %>%
   mutate(occupancy_rate = round(100*(beds_occ/beds_total)), Date = update) %>%
-  select(Date, hospital_name, occupancy_rate)
+  select(Date, hospital_name, occupancy_rate, beds_occ, beds_total)
 
 # get current max value for montreal (for y-axis in weekly plot)
 max_today <- max(df_montreal$occupancy_rate, na.rm=T)
 
-
 # sort data, get hospital names for selector
-# df_montreal <- filter(df_montreal, hospital_name != "Total Montréal")
+# df_montreal <- filter(df_montreal, hospital_name != "Total Montréal") # exclude total?
 df_montreal <- df_montreal[order(-df_montreal$occupancy_rate, df_montreal$hospital_name),]
 hospitals <- df_montreal$hospital_name
 
-
-# colors for circles on map
+# set colors for circles on map
 pal_red <- colorNumeric(palette = "YlOrRd", domain = df_map$occupancy_rate)
 
 # create labels for map
 df_map$content <- sprintf(paste0("<b>",df_map$hospital_name,"</b><br>",
                          "Occupancy: ", df_map$occupancy_rate, "&#37;",
-                       "<br>Stretchers in use: ", df_map$beds_occ, " / ", df_map$beds_total)) %>%
+                         "<br>Stretchers in use: ", df_map$beds_occ, " / ", df_map$beds_total)) %>%
   lapply(htmltools::HTML)
 
 
@@ -168,7 +166,7 @@ server <- function(input, output, session) {
       geom_text(aes(label = if_else(occupancy_rate >= 0 & occupancy_rate <= 50, paste0(occupancy_rate,"%"), NULL)), colour = "#595959", size = 3, hjust = -0.1, position = position_stack(vjust = 0), na.rm=T) +
       geom_text(aes(label = if_else(occupancy_rate > 50, paste0(occupancy_rate,"%"), NULL)), colour = "white", size = 3, hjust = -0.1, position = position_stack(vjust = 0), na.rm=T) +
       coord_flip() +
-      scale_fill_distiller(palette = "YlOrRd", direction = 1, limits = c(0,max(df_map$occupancy_rate))) + # palette based on all of quebec
+      scale_fill_distiller(palette = "YlOrRd", direction = 1, limits = c(0,max(df_map$occupancy_rate))) + # palette based on montreal and surrounding ERS
       # scale_fill_distiller(palette = "YlOrRd", direction = 1, limits = c(0,max(df_montreal$occupancy_rate))) + # palette based on montreal
       theme_minimal() +
       labs(x = NULL, y = NULL, caption = paste(update_txt)) +
@@ -179,8 +177,11 @@ server <- function(input, output, session) {
   # select hospital and get data for selected hospital
   selected <- reactive(df_longterm %>% select(Date, occupancy = input$hospital))
   
-  # get current occupancy value for selected hospital
-  occupancy_current <- reactive(filter(df_montreal, str_detect(hospital_name, input$hospital))[1,3])
+  # get current occupancy and stretchers for selected hospital to show in plot subtitle
+  # no subsetting allowed.. not sure if that's the best way:
+  occupancy_current <- reactive(filter(df_montreal, str_detect(hospital_name, input$hospital))[1,3]) # df_montreal$occupany_rate
+  beds_occ_current <- reactive(filter(df_montreal, str_detect(hospital_name, input$hospital))[1,4]) # df_montreal$beds_occ
+  beds_total_current <- reactive(filter(df_montreal, str_detect(hospital_name, input$hospital))[1,5]) # df_montreal$beds_total
   # OBS! don't forget parenthesis => occupancy_current()
   
   # plot_weekdays: means for each day
@@ -192,7 +193,8 @@ server <- function(input, output, session) {
       subtitle_txt <- "(Currently no data available)"
     } else {
       p <- geom_col(aes(x=weekday_current, y=occupancy_current(), fill = occupancy_current()), position = "identity", show.legend = F)
-      subtitle_txt <- paste0("Current occupancy rate: ", occupancy_current(), "%")
+      subtitle_txt <- paste0("Current occupancy: ", occupancy_current(), "%", 
+                             "\nStretchers in use: ", beds_occ_current(), " / ", beds_total_current())
     }
     # get data and plot    
     selected() %>%
@@ -209,7 +211,7 @@ server <- function(input, output, session) {
         theme_minimal() +
         scale_fill_gradient(low = "brown2", high = "brown2") + # colors for week-cols and current cols
         theme(panel.grid = element_blank(), # axis.ticks.y = element_blank(), axis.text.y = element_blank(),
-              plot.subtitle=element_text(size=12, color="#666666")) + 
+              plot.subtitle=element_text(size=11, color="#666666")) + 
         p # layer for selected occupancy
   }, res = 96)
   
