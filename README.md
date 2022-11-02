@@ -2,7 +2,7 @@
 ### <a href="https://jlomako.shinyapps.io/Montreal_ER/">Open app</a>
 
 This app shows you which emergency rooms are busiest in Montréal. 
-The app is updated every hour to show the current occupancy for each ER.
+The data is updated every hour to show the current occupancy for each ER.
 For each hospital, you can track the median occupancy rates over the week, 
 as well as the occupancy over the past 90 days. 
 It can predict the occupancy for the next week, based on data that was collected over time.
