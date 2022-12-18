@@ -1,5 +1,5 @@
 ## Montréal Emergency Room Tracker 
-### <a href="https://jlomako.shinyapps.io/Montreal_ER/">Open app</a>
+### <a href="https://jlomako.shinyapps.io/Montreal_ER/">Open web app</a>
 
 This app shows you which emergency rooms are busiest in Montréal. 
 The data is updated every hour to show the current occupancy for each ER.
