@@ -141,7 +141,7 @@ ui <- bootstrapPage(
       # source & disclaimer
       div(class="row",
           div(class="col-lg-12 text-center",
-              div(HTML("Data source: Ministère de la Santé et des Services sociaux du Québec<br>© Copyright 2022,"),
+              div(HTML("Data source: Ministère de la Santé et des Services sociaux du Québec<br>© Copyright 2022-2023,"),
                   tags$a(href="https://github.com/jlomako", "jlomako")
               ),
           ),
@@ -249,7 +249,6 @@ server <- function(input, output, session) {
   
   # render leaflet when switching to second tab
   # inside observeEvent because map disappeared on mobile
-  # map includes all of quebec!
   observeEvent(input$tabs,{
     if(input$tabs == "tab2")
       output$map <- renderLeaflet({
