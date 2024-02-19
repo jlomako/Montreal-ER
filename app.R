@@ -1,7 +1,7 @@
 ######################################################################
 #
 # Occupancy rates in Montreal Emergency Rooms
-# incl. map with surrounding hospitals
+# includes map with surrounding hospitals
 #
 ######################################################################
 
@@ -24,7 +24,7 @@ names(df_longterm)[names(df_longterm) == "Total"] <- "Total Montréal"
 # get times
 # df = data from mssss  
 update <- as.Date(df$Mise_a_jour[1])
-update_time <- df$Heure_de_l.extraction_.image.[1]
+update_time <- str_split(df$Mise_a_jour[1], "T")[[1]][2]
 update_txt <- paste("\nlast update:", update, "at", update_time)
 weekday_current <- lubridate::wday(update, label = T)
 
@@ -76,8 +76,8 @@ pal_red <- colorNumeric(palette = "YlOrRd", domain = df_map$occupancy_rate)
 
 # create labels for map
 df_map$content <- sprintf(paste0("<b>",df_map$hospital_name,"</b><br>",
-                         "Occupancy: ", df_map$occupancy_rate, "&#37;",
-                         "<br>Stretchers in use: ", df_map$beds_occ, " / ", df_map$beds_total)) %>%
+                                 "Occupancy: ", df_map$occupancy_rate, "&#37;",
+                                 "<br>Stretchers in use: ", df_map$beds_occ, " / ", df_map$beds_total)) %>%
   lapply(htmltools::HTML)
 
 
@@ -101,8 +101,8 @@ ui <- bootstrapPage(
                       tabsetPanel(id = "tabs", type = "tabs",
                                   tabPanel(value = "tab1", "view chart", plotOutput("plot_today")),
                                   tabPanel(value = "tab2","view map", leafletOutput("map"))
-                                  ) 
-                      ),
+                      ) 
+                  ),
                   div(class="card-footer", h5("The occupancy rate refers to the percentage of stretchers that are occupied by patients. 
                                               An occupancy rate of over 100% indicates that the emergency room is over capacity, 
                                               typically meaning that there are more patients than there are stretchers.",
@@ -111,10 +111,10 @@ ui <- bootstrapPage(
                   #  Wait times may vary depending on the number of patients and the nature of your illness or injury."
               ),    
           ),
-
-      
-      # card with tabs
-
+          
+          
+          # card with tabs
+          
           div(class="col-sm-6 py-2",
               div(class="card h-100",
                   div(class="card-header bg-primary", h5("Select a hospital", class="card-title")),
@@ -141,7 +141,7 @@ ui <- bootstrapPage(
       # source & disclaimer
       div(class="row",
           div(class="col-lg-12 text-center",
-              div(HTML("Data source: Ministère de la Santé et des Services sociaux du Québec<br>© Copyright 2022-2023,"),
+              div(HTML("Data source: Ministère de la Santé et des Services sociaux du Québec<br>© Copyright 2022-2024,"),
                   tags$a(href="https://github.com/jlomako", "jlomako")
               ),
           ),
@@ -162,9 +162,9 @@ server <- function(input, output, session) {
       ggplot(aes(x = reorder(hospital_name, occupancy_rate), y = occupancy_rate, fill = occupancy_rate)) +
       geom_col(position = "identity", size = 3, show.legend = F) +
       scale_y_continuous(expand = c(0,0)) + # gets rid of gap between y-axis and plot
-      geom_text(aes(label = if_else(occupancy_rate < 0, "no data", NULL)), colour = "grey", size = 3, hjust = "inward", na.rm=T) +
-      geom_text(aes(label = if_else(occupancy_rate >= 0 & occupancy_rate <= 50, paste0(occupancy_rate,"%"), NULL)), colour = "#595959", size = 3, hjust = -0.1, position = position_stack(vjust = 0), na.rm=T) +
-      geom_text(aes(label = if_else(occupancy_rate > 50, paste0(occupancy_rate,"%"), NULL)), colour = "white", size = 3, hjust = -0.1, position = position_stack(vjust = 0), na.rm=T) +
+      geom_text(aes(label = if_else(occupancy_rate < 0, "no data", NA)), colour = "grey", size = 3, hjust = "inward", na.rm=T) +
+      geom_text(aes(label = if_else(occupancy_rate >= 0 & occupancy_rate <= 50, paste0(occupancy_rate,"%"), NA)), colour = "#595959", size = 3, hjust = -0.1, position = position_stack(vjust = 0), na.rm=T) +
+      geom_text(aes(label = if_else(occupancy_rate > 50, paste0(occupancy_rate,"%"), NA)), colour = "white", size = 3, hjust = -0.1, position = position_stack(vjust = 0), na.rm=T) +
       coord_flip() +
       scale_fill_distiller(palette = "YlOrRd", direction = 1, limits = c(0,max(df_map$occupancy_rate))) + # palette based on montreal and surrounding ERS
       # scale_fill_distiller(palette = "YlOrRd", direction = 1, limits = c(0,max(df_montreal$occupancy_rate))) + # palette based on montreal
@@ -202,17 +202,17 @@ server <- function(input, output, session) {
       mutate(day_number = as.POSIXlt(Date)$wday+1) %>% # Sun = 1, Mon = 2 etc
       group_by(day_number) %>% 
       summarise(occupancy_mean = round(median(occupancy, na.rm=T))) %>%
-        ggplot(aes(x = lubridate::wday(day_number, label = T), y = occupancy_mean, fill = occupancy_mean)) +
-        geom_col(position = "identity", show.legend=F, alpha = 0.15, na.rm=T) +
-        scale_y_continuous(limits = c(0,299), expand = c(0,0), labels = scales::percent_format(scale = 1)) + # OBS!!! max_today
-        labs(title = input$hospital, subtitle = subtitle_txt, y = NULL, x = NULL, caption = NULL) +
-        geom_hline(yintercept=100, linetype="dashed", color = "red") +
-        geom_hline(yintercept = 200, linetype="dashed", col = "lightgrey") +
-        theme_minimal() +
-        scale_fill_gradient(low = "brown2", high = "brown2") + # colors for week-cols and current cols
-        theme(panel.grid = element_blank(), # axis.ticks.y = element_blank(), axis.text.y = element_blank(),
-              plot.subtitle=element_text(size=11, color="#666666")) + 
-        p # layer for selected occupancy
+      ggplot(aes(x = lubridate::wday(day_number, label = T), y = occupancy_mean, fill = occupancy_mean)) +
+      geom_col(position = "identity", show.legend=F, alpha = 0.15, na.rm=T) +
+      scale_y_continuous(limits = c(0,299), expand = c(0,0), labels = scales::percent_format(scale = 1)) + # OBS!!! max_today
+      labs(title = input$hospital, subtitle = subtitle_txt, y = NULL, x = NULL, caption = NULL) +
+      geom_hline(yintercept=100, linetype="dashed", color = "red") +
+      geom_hline(yintercept = 200, linetype="dashed", col = "lightgrey") +
+      theme_minimal() +
+      scale_fill_gradient(low = "brown2", high = "brown2") + # colors for week-cols and current cols
+      theme(panel.grid = element_blank(), # axis.ticks.y = element_blank(), axis.text.y = element_blank(),
+            plot.subtitle=element_text(size=11, color="#666666")) + 
+      p # layer for selected occupancy
   }, res = 96)
   
   # plot: past 90 days
@@ -267,4 +267,3 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server)
-
