@@ -19,5 +19,5 @@ Cette application Shiny vous montre quelles salle d'urgence sont les plus occup√
 * set wd to script directory to deploy app in R
 * reactive expression must be within a reactive or render* function <code>selected <- reactive(data %>% select(Date, occupancy = input$hospital))</code>, don't forget parentheses when calling that variable <code>selected()</code>
 * long-term data is collected in <a href="https://github.com/jlomako/hospital-occupancy-tracker">hospital-occupancy-tracker</a> <s>and <a href="https://github.com/jlomako/pdfscraper">pdfscraper</a> (backup)</s>
-* predictions are done in <a href="https://github.com/jlomako/prophet-bot">prophet-bot</a> unsing the prophet package
+* predictions are done in <a href="https://github.com/jlomako/prophet-bot">prophet-bot</a> using the prophet package
 * currenty working on an updated tracker here: <a href="https://github.com/jlomako/Montreal-ER-Status">Montreal-ER-Status</a>
